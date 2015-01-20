@@ -1,0 +1,9 @@
+
+Phase 1:
+
+  1. Joystick controls servo
+      - Joystick angle defines servo rotation speed
+
+  2. Transmit signal
+
+  3. Test what the receiver sees using the logic analyzer
