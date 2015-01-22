@@ -1,13 +1,11 @@
-$ servo_control.h
+
 #ifndef UVIC_RTSYS_SERVO_CONTROL_INCLUDED
 #define UVIC_RTSYS_SERVO_CONTROL_INCLUDED
 
-#include <Servo.h>
-
 void joystick_init();
 
-void read_joystick_position();
+void read_joystick_position_and_control_servo();
 
 int read_joystick_pressed();
 
-#ednif //UVIC_RTSYS_SERVO_CONTROL_INCLUDED
+#endif //UVIC_RTSYS_SERVO_CONTROL_INCLUDED
