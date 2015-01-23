@@ -10,7 +10,7 @@ static task_t *tasks;
 static uint32_t task_count;
 
 void scheduler_task_init
-(task_t *task, uint16_t delay, uint16_t period, task_cb cb, bool enabled)
+(task_t *task, uint32_t delay, uint32_t period, task_cb cb, bool enabled)
 {
     task->callback = cb;
     task->is_enabled = enabled;
@@ -34,7 +34,7 @@ void scheduler_init(task_t *t, uint32_t c)
     tasks = t;
     task_count = c;
 
-    milliseconds_t now = current_time_ms();
+    microseconds_t now = current_time_micros();
 
     for(uint32_t task_idx = 0; task_idx < task_count; ++task_idx)
     {
@@ -43,13 +43,14 @@ void scheduler_init(task_t *t, uint32_t c)
     }
 }
 
-milliseconds_t scheduler_run()
+microseconds_t scheduler_run()
 {
-    milliseconds_t now = current_time_ms();
+    microseconds_t now = current_time_micros();
 
     // FIXME: What to do in case no task?
     // Here, we are requesting a run at most after 1 second.
-    milliseconds_t next_time = now + 1000;
+    microseconds_t one_second = 1e6;
+    microseconds_t next_time = now + one_second;
 
     //std::cout << "now: " << now << endl;
 
@@ -66,7 +67,8 @@ milliseconds_t scheduler_run()
             if (task.is_enabled)
                 task.callback();
 
-            task.next_time = task.next_time + task.period;
+            //uint32_t next_task_time = task.next_time + task.period;
+            task.next_time = now + task.period;
 
 #if 0
             uint32_t time_since_task_start =

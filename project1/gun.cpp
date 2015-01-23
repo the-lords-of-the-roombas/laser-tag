@@ -2,21 +2,29 @@
 
 #include "Arduino.h"
 
-bool g_enabled;
-int g_current_bit;
-uint16_t g_code;
+static bool g_enabled;
+static int g_current_bit;
+static uint16_t g_code;
 
+// 38kHz fequency = 0.00002631578947368421 second period
+// at 16Mhz and no prescaler, that is about 421 cycles.
 #define GUN_TIMER_TOP 421
 #define GUN_TIMER_HALF 210
 
 static void gun_send_hi()
 {
-    OCR1C = GUN_TIMER_HALF;
+    // Enable output C:
+    TCCR1A |= (1<<COM1C1);
+
+    //OCR1C = GUN_TIMER_HALF;
 }
 
 static void gun_send_lo()
 {
-    OCR1C = 0;
+    // Disable output C:
+    TCCR1A &= ~(1<<COM1C1);
+
+    //OCR1C = 0;
 }
 
 void gun_init()
@@ -37,18 +45,17 @@ void gun_init()
     //Enable output C.
     TCCR1A |= (1<<COM1C1);
 
-    // 38kHz fequency = 0.00002631578947368421 second period
-    // at 16Mhz and no prescaler, that is about 421 cycles.
-
     //No prescaler
     TCCR1B |= (1<<CS10);
-    OCR1A = 421;  // Set TOP for 50 us period
-    OCR1C = 0;  // Set TARGET for 50 % pulse width
+    OCR1A = GUN_TIMER_TOP;  // Set TOP
+    OCR1C = GUN_TIMER_HALF;  // Set TARGET for 50 % pulse width
 
     // State
     g_enabled = false;
     g_current_bit = 0;
     g_code = 0;
+
+    gun_send_lo();
 }
 
 void gun_trigger(uint8_t code)
@@ -58,13 +65,26 @@ void gun_trigger(uint8_t code)
 
     g_enabled = true;
     g_code = 0;
-    g_code |= code;
-    g_code |= (0x10 << 8);
+    g_code |= 0x01;
+    g_code |= (code << 2);
     g_current_bit = 0;
 }
 
 void gun_task()
 {
+    /*
+    static bool hi = false;
+
+    if (hi)
+        gun_send_hi();
+    else
+        gun_send_lo();
+
+    hi = !hi;
+
+    return;
+    */
+
     if (!g_enabled)
         return;
 

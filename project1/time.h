@@ -6,6 +6,7 @@
 #ifdef AVR
 
 typedef uint32_t milliseconds_t;
+typedef unsigned long microseconds_t;
 
 #include "Arduino.h"
 
@@ -14,11 +15,18 @@ inline milliseconds_t current_time_ms()
     return millis();
 }
 
+inline microseconds_t current_time_micros()
+{
+    return micros();
+}
+
+
 #else // not AVR
 
 #include <chrono>
 
 typedef uint64_t milliseconds_t;
+typedef uint64_t microseconds_t;
 
 inline milliseconds_t current_time_ms()
 {
