@@ -10,6 +10,7 @@ static int code_idx = 3;
 
 static int code_indicator_lo_pin = 2;
 static int code_indicator_hi_pin = 3;
+static int task_duration_pin = 4;
 
 void read_and_report_joystick_press()
 {
@@ -73,6 +74,7 @@ void setup()
 
     pinMode(code_indicator_lo_pin, OUTPUT);
     pinMode(code_indicator_hi_pin, OUTPUT);
+    pinMode(task_duration_pin, OUTPUT);
 
     joystick_init();
     gun_init();

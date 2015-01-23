@@ -85,16 +85,21 @@ void gun_task()
     return;
     */
 
-    if (!g_enabled)
-        return;
+    digitalWrite(4, HIGH);
 
-    if((g_code >> g_current_bit) & 0x1)
-        gun_send_hi();
-    else
-        gun_send_lo();
+    if (g_enabled)
+    {
 
-    ++g_current_bit;
+        if((g_code >> g_current_bit) & 0x1)
+            gun_send_hi();
+        else
+            gun_send_lo();
 
-    if (g_current_bit >= 10)
-        g_enabled = false;
+        ++g_current_bit;
+
+        if (g_current_bit >= 10)
+            g_enabled = false;
+    }
+
+    digitalWrite(4, LOW);
 }
