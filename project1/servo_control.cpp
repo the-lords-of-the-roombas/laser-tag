@@ -26,5 +26,5 @@ void read_joystick_position_and_control_servo(){
 }
 
 int read_joystick_pressed(){
-    return digitalRead(SwButtonPin);
+    return !digitalRead(SwButtonPin);
 }
