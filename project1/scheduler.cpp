@@ -6,8 +6,8 @@
 
 using namespace std;
 
-task_t *tasks;
-uint32_t task_count;
+static task_t *tasks;
+static uint32_t task_count;
 
 void scheduler_task_init
 (task_t *task, uint16_t delay, uint16_t period, task_cb cb, bool enabled)
@@ -66,7 +66,7 @@ milliseconds_t scheduler_run()
             if (task.is_enabled)
                 task.callback();
 
-            task.next_time += task.period;
+            task.next_time = task.next_time + task.period;
 
 #if 0
             uint32_t time_since_task_start =
