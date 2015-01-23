@@ -67,8 +67,7 @@ microseconds_t scheduler_run()
             if (task.is_enabled)
                 task.callback();
 
-            //uint32_t next_task_time = task.next_time + task.period;
-            task.next_time = now + task.period;
+            task.next_time = task.next_time + task.period;
 
 #if 0
             uint32_t time_since_task_start =
