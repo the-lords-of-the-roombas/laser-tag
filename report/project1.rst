@@ -8,7 +8,7 @@ Authors: Darren Prince and Jakob Leben
 
 
 Overview
---------
+********
 
 Requirements:
 
@@ -23,7 +23,7 @@ Additional:
 - A set of LED lights indicates index of selected code in binary form.
 
 Components
-----------
+**********
 
 (Add details)
 
@@ -38,7 +38,7 @@ How each component operates?
 
 
 Reading joystick data
-.....................
+---------------------
 
 Hardware
 
@@ -46,7 +46,7 @@ Software
 
 
 Controlling servo
-.....................
+-----------------
 
 Hardware
 
@@ -54,7 +54,7 @@ Software
 
 
 Emitting code over IR
-.....................
+---------------------
 
 The requirement was to transmit 1 byte of information encoded as modulation
 of IR emission:
@@ -69,7 +69,7 @@ of IR emission:
   bit must be observed by the receiver.
 
 Hardware
-********
+........
 
 We decided to use the capability of the ATmega2560 chip to generate a PWM
 waveform for the 38kHz modulation of IR emission which corresponds to the bit
@@ -87,7 +87,7 @@ from the Arduino was limited with a resistor.
 <diagram>
 
 Software
-********
+........
 
 A challenge arises because the Arduino library only allows PWM generation at
 a fixed frequency, which is not our desired frequency of 38kHz.
@@ -171,13 +171,13 @@ its digital pin 13, which was set into output mode::
     pinMode(13, OUTPUT);
 
 The big picture
-...............
+---------------
 
 Complete electrical diagram
 
 
 Task scheduling and communication
----------------------------------
+*********************************
 
 We have the following periodic tasks:
 
