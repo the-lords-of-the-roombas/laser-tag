@@ -30,13 +30,7 @@ void joystick_read_position_and_control_servo(void*object)
 
     // Lo-pass filter the input
     int in_raw = analogRead(x_pin);
-
-    Serial.println("---");
-    Serial.println(in_raw);
-
     int in = filter_process(&jstick->filter, in_raw);
-
-    Serial.println(in);
 
     // Map input to range -100 to 100
     int step = map(in, 0, 380, -100, 100);
