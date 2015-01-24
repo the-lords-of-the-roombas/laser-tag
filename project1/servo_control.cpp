@@ -3,6 +3,7 @@
 #include <Arduino.h>
 
 static Servo myservo;  // create servo object to control a servo
+static const int servo_control_pin = 9;
 static const int sw_pin = 8;  //create joystick switch object on digital 8
 static int x_pin = 0;  //create joystick analog position object on analog 0
 static int y_pin = 1;
@@ -14,19 +15,44 @@ static int previous_joystick_y_state = 0;
  
 void joystick_init() 
 { 
-  myservo.attach(9);  // attaches the servo on pin 9 to the servo object 
-  pinMode(sw_pin, INPUT); //sets the SW pin as input
-  digitalWrite(sw_pin, HIGH); //sets the SW button high
+  myservo.attach(servo_control_pin);
+  pinMode(sw_pin, INPUT);
+  digitalWrite(sw_pin, HIGH);
 } 
  
-void read_joystick_position_and_control_servo(){
-    int val = analogRead(x_pin);
-    int pos_step = map(val, 0, 360, -10, 10);
-    servo_pos = servo_pos + pos_step;
+void read_joystick_position_and_control_servo()
+{
+    static int in_1 = 0, out_1 = 0;
+
+    // Lo-pass filter the input
+    int in_0 = analogRead(x_pin);
+    int v = (0.2 * in_0 + 0.8 * out_1);
+    out_1 = v;
+    in_1 = in_0;
+
+    // Map input to range -100 to 100
+    int step = map(v, 0, 380, -100, 100);
+
+    // Don't do anything if inside the range -10 to 10
+    if (step >= 10)
+        step -= 10;
+    else if (step <= -10)
+        step += 10;
+    else
+        return;
+
+    // Scale further down to range -10 to 10
+    step = map(step, -100, 100, -10, 10);
+
+    // Update control variable and keep it in range 0 to 3000
+    servo_pos = servo_pos + step;
+    int range = 3000;
     if(servo_pos < 0) servo_pos = 0;
-    if(servo_pos > 1000) servo_pos = 1000;
-    int servo_pos = servo_pos * 0.18;
-    myservo.write(servo_pos);
+    if(servo_pos > range) servo_pos = range;
+
+    // Map control variable to servo degrees and output that to servo
+    int servo_degrees = map(servo_pos, 0, range, 0, 180);
+    myservo.write(servo_degrees);
 }
 
 int read_joystick_pressed(){
