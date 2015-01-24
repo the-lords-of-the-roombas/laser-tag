@@ -1,5 +1,5 @@
 #include "scheduler.h"
-#include "servo_control.h"
+#include "joystick.h"
 #include "gun.h"
 
 static const int task_count = 4;

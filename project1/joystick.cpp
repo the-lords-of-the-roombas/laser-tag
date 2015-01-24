@@ -1,5 +1,5 @@
+#include "joystick.h"
 #include "modified_servo.h"
-#include "servo_control.h"
 #include <Arduino.h>
 
 static const int servo_control_pin = 9;
