@@ -78,7 +78,7 @@ void setup()
 
     scheduler_task_init(tasks+0, 0, 20e3, &joystick_read_position_and_control_servo, &joystick);
     scheduler_task_init(tasks+1, 5e3, 40e3, &detect_joystick_press_and_shoot, 0);
-    scheduler_task_init(tasks+2, 5e3, 40e3, &update_current_code, 0);
+    scheduler_task_init(tasks+2, 10e3, 40e3, &update_current_code, 0);
     scheduler_task_init(tasks+3, 250, 500, &gun_transmit, &gun);
 
     scheduler_init(tasks, task_count);
