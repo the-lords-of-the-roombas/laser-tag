@@ -41,16 +41,30 @@ Reading joystick data
 ---------------------
 
 Hardware
+........
 
 Software
+........
+
+
+Selecting transmission code
+---------------------------
+
+Hardware
+........
+
+Software
+........
 
 
 Controlling servo
 -----------------
 
 Hardware
+........
 
 Software
+........
 
 
 Emitting code over IR
@@ -132,43 +146,59 @@ The timer was configured with the following code::
     #define GUN_TIMER_TOP 421
     #define GUN_TIMER_HALF 210
 
-    // Clear control registers
-    TCCR1A = 0;
-    TCCR1B = 0;
+    void gun_init(gun_state * gun)
+    {
+        // ...
 
-    // Disable interrupt from Output-Compare C
-    TIMSK1 &= ~(1<<OCIE1C);
+        // Clear control registers
+        TCCR1A = 0;
+        TCCR1B = 0;
 
-    // Select Fast PWM mode (15)
-    TCCR1A |= (1<<WGM10) | (1<<WGM11);
-    TCCR1B |= (1<<WGM12) | (1<<WGM13);
+        // Disable interrupt from Output-Compare C
+        TIMSK1 &= ~(1<<OCIE1C);
 
-    // Use clock with no prescaler
-    TCCR1B |= (1<<CS10);
+        // Select Fast PWM mode (15)
+        TCCR1A |= (1<<WGM10) | (1<<WGM11);
+        TCCR1B |= (1<<WGM12) | (1<<WGM13);
 
-    // Set counter TOP value by setting Output-Compare Register A
-    OCR1A = GUN_TIMER_TOP;
+        // Use clock with no prescaler
+        TCCR1B |= (1<<CS10);
 
-    // Set Waveform Generator C to 50% pulse width
-    // by setting Output-Compare Register C
-    OCR1C = GUN_TIMER_HALF;
+        // Set counter TOP value by setting Output-Compare Register A
+        OCR1A = GUN_TIMER_TOP;
+
+        // Set Waveform Generator C to 50% pulse width
+        // by setting Output-Compare Register C
+        OCR1C = GUN_TIMER_HALF;
+
+        // ...
+    }
 
 In order to generate the bit values according to our IR communcation protocol,
 we enabled the Waveform Generator C output for 500 microseconds for the value 1,
 and disabled it for the value 0::
 
-    // Enable Waveform Generator C output:
-    TCCR1A |= (1<<COM1C1);
+    static void gun_send_hi()
+    {
+        // Enable output C:
+        TCCR1A |= (1<<COM1C1);
+    }
 
-    //...
-
-    // Disable Waveform Generator C output:
-    TCCR1A &= ~(1<<COM1C1);
+    static void gun_send_lo()
+    {
+        // Disable output C:
+        TCCR1A &= ~(1<<COM1C1);
+    }
 
 Arduino has the output of the Waveform Generator C of Timer 1 connected to
-its digital pin 13, which was set into output mode::
+its digital pin 13, which was set to output mode::
 
-    pinMode(13, OUTPUT);
+    void gun_init(gun_state * gun)
+    {
+        //  ...
+        pinMode(13, OUTPUT);
+        //  ...
+    }
 
 The big picture
 ---------------
