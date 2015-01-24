@@ -1,37 +1,45 @@
-#include "servo_control.h"
 #include "modified_servo.h"
+#include "servo_control.h"
 #include <Arduino.h>
 
-static Servo myservo;  // create servo object to control a servo
 static const int servo_control_pin = 9;
 static const int sw_pin = 8;  //create joystick switch object on digital 8
-static int x_pin = 0;  //create joystick analog position object on analog 0
-static int y_pin = 1;
+static const int x_pin = 0;  //create joystick analog position object on analog 0
+static const int y_pin = 1;
 
-static int servo_pos = 0;
+Servo servo;
 
-static int code_idx = 0;
-static int previous_joystick_y_state = 0;
- 
-void joystick_init() 
+void joystick_init(joystick_state *jstick)
 { 
-  myservo.attach(servo_control_pin);
-  pinMode(sw_pin, INPUT);
-  digitalWrite(sw_pin, HIGH);
+    filter_init(&jstick->filter);
+
+    jstick->servo_control = 0;
+    jstick->code_idx = 0;
+    jstick->previous_joystick_y_state = 0;
+    jstick->is_pressed = false;
+
+    servo.attach(servo_control_pin);
+
+    pinMode(sw_pin, INPUT);
+    digitalWrite(sw_pin, HIGH);
 } 
  
-void read_joystick_position_and_control_servo()
+void joystick_read_position_and_control_servo(void*object)
 {
-    static int in_1 = 0, out_1 = 0;
+    joystick_state* jstick = (joystick_state*)object;
 
     // Lo-pass filter the input
-    int in_0 = analogRead(x_pin);
-    int v = (0.2 * in_0 + 0.8 * out_1);
-    out_1 = v;
-    in_1 = in_0;
+    int in_raw = analogRead(x_pin);
+
+    Serial.println("---");
+    Serial.println(in_raw);
+
+    int in = filter_process(&jstick->filter, in_raw);
+
+    Serial.println(in);
 
     // Map input to range -100 to 100
-    int step = map(v, 0, 380, -100, 100);
+    int step = map(in, 0, 380, -100, 100);
 
     // Don't do anything if inside the range -10 to 10
     if (step >= 10)
@@ -45,22 +53,27 @@ void read_joystick_position_and_control_servo()
     step = map(step, -100, 100, -10, 10);
 
     // Update control variable and keep it in range 0 to 3000
-    servo_pos = servo_pos + step;
+    int servo_ctl = jstick->servo_control + step;
     int range = 3000;
-    if(servo_pos < 0) servo_pos = 0;
-    if(servo_pos > range) servo_pos = range;
+    if(servo_ctl < 0) servo_ctl = 0;
+    if(servo_ctl > range) servo_ctl = range;
+    jstick->servo_control = servo_ctl;
 
     // Map control variable to servo degrees and output that to servo
-    int servo_degrees = map(servo_pos, 0, range, 0, 180);
-    myservo.write(servo_degrees);
+    int servo_degrees = map(servo_ctl, 0, range, 0, 180);
+    servo.write(servo_degrees);
 }
 
-int read_joystick_pressed(){
-    return !digitalRead(sw_pin);
-}
-
-int read_gun_code()
+void joystick_read_pressed(void *object)
 {
+    joystick_state* jstick = (joystick_state*)object;
+    jstick->is_pressed = !digitalRead(sw_pin);
+}
+
+void joystick_update_code_selection(void *object)
+{
+    joystick_state* jstick = (joystick_state*)object;
+
     int y = analogRead(y_pin);
     int joystick_state;
     if (y < 90)
@@ -70,16 +83,15 @@ int read_gun_code()
     else
         joystick_state = 0;
 
-    if (joystick_state != previous_joystick_y_state && joystick_state)
+    if (joystick_state != jstick->previous_joystick_y_state && joystick_state)
     {
-        code_idx = code_idx + joystick_state;
+        int code_idx = jstick->code_idx + joystick_state;
         if (code_idx >= 4)
             code_idx = 0;
         else if(code_idx < 0)
             code_idx = 3;
+        jstick->code_idx = code_idx;
     }
 
-    previous_joystick_y_state = joystick_state;
-
-    return code_idx;
+    jstick->previous_joystick_y_state = joystick_state;
 }

@@ -2,10 +2,6 @@
 
 #include "Arduino.h"
 
-static bool g_enabled;
-static int g_current_bit;
-static uint16_t g_code;
-
 // 38kHz fequency = 0.00002631578947368421 second period
 // at 16Mhz and no prescaler, that is about 421 cycles.
 #define GUN_TIMER_TOP 421
@@ -27,7 +23,7 @@ static void gun_send_lo()
     //OCR1C = 0;
 }
 
-void gun_init()
+void gun_init(gun_state * gun)
 {
     pinMode(13, OUTPUT);
 
@@ -51,54 +47,42 @@ void gun_init()
     OCR1C = GUN_TIMER_HALF;  // Set TARGET for 50 % pulse width
 
     // State
-    g_enabled = false;
-    g_current_bit = 0;
-    g_code = 0;
+    gun->enabled = false;
+    gun->code = 0;
+    gun->current_bit = 0;
 
     gun_send_lo();
 }
 
-void gun_trigger(uint8_t code)
+void gun_trigger(gun_state * gun, uint8_t code)
 {
-    if (g_enabled)
+    if (gun->enabled)
         return;
 
-    g_enabled = true;
-    g_code = 0;
-    g_code |= 0x01;
-    g_code |= (code << 2);
-    g_current_bit = 0;
+    gun->enabled = true;
+    gun->code = 0;
+    gun->code |= 0x01;
+    gun->code |= (code << 2);
+    gun->current_bit = 0;
 }
 
-void gun_task()
+void gun_transmit(void *object)
 {
-    /*
-    static bool hi = false;
-
-    if (hi)
-        gun_send_hi();
-    else
-        gun_send_lo();
-
-    hi = !hi;
-
-    return;
-    */
-
+    gun_state *gun = (gun_state*)object;
     digitalWrite(4, HIGH);
 
-    if (g_enabled)
+    if (gun->enabled)
     {
 
-        if((g_code >> g_current_bit) & 0x1)
+        if((gun->code >> gun->current_bit) & 0x1)
             gun_send_hi();
         else
             gun_send_lo();
 
-        ++g_current_bit;
+        ++gun->current_bit;
 
-        if (g_current_bit >= 10)
-            g_enabled = false;
+        if (gun->current_bit >= 10)
+            gun->enabled = false;
     }
 
     digitalWrite(4, LOW);

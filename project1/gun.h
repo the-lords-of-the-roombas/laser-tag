@@ -3,10 +3,17 @@
 
 #include <stdint.h>
 
-void gun_init();
+struct gun_state
+{
+    bool enabled;
+    uint16_t code;
+    int current_bit;
+};
 
-void gun_trigger(uint8_t code);
+void gun_init(gun_state*);
 
-void gun_task();
+void gun_trigger(gun_state*, uint8_t code);
+
+void gun_transmit(void*);
 
 #endif // UVIC_RTSYS_GUN_INCLUDED

@@ -10,8 +10,10 @@ static task_t *tasks;
 static uint32_t task_count;
 
 void scheduler_task_init
-(task_t *task, uint32_t delay, uint32_t period, task_cb cb, bool enabled)
+(task_t *task, uint32_t delay, uint32_t period,
+ task_cb cb, void *object, bool enabled)
 {
+    task->object = object;
     task->callback = cb;
     task->is_enabled = enabled;
     task->period = period;
@@ -65,7 +67,7 @@ microseconds_t scheduler_run()
         if (expired)
         {
             if (task.is_enabled)
-                task.callback();
+                task.callback(task.object);
 
             task.next_time = task.next_time + task.period;
 
