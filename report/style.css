@@ -1,0 +1,19 @@
+
+pre {
+  /*background-color: rgb(230,230,255);*/
+  background-color: rgb(245,242,200);
+  border: 1px solid rgb(196,193,160);
+  padding: 1em;
+}
+
+code {
+  /*font-size: 10pt;*/
+  background-color: rgb(245,242,200);
+  padding: 1pt;
+}
+
+pre > code {
+  /*font-size: 10pt;*/
+  background-color: transparent;
+  padding: 0pt;
+}

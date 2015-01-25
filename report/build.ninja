@@ -3,7 +3,7 @@ rule install
   command = cp $in $destination && touch $out
 
 rule pandoc
-  command = pandoc $in -o $out
+  command = pandoc $in -o $out -c $css
 
 rule dot
   command = dot $in -o$out -T$type
@@ -11,5 +11,6 @@ rule dot
 build communication.svg: dot communication.gv
   type=svg
 
-build project1.html: pandoc project1.rst
+build project1.html: pandoc project1.rst | style.css
+  css=style.css
 
