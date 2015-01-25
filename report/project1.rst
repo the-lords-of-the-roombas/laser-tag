@@ -242,22 +242,98 @@ Complete electrical diagram
 Task scheduling and communication
 *********************************
 
+Schedule
+........
+
 We have the following periodic tasks:
 
-- <Task 1>:
-    - purpose, period
-- <Task 2>:
-    - purpose, period
-- <task 3>
-    - purpose, period
+#. Servo control
+    - Purpose: Reading joystick position and controlling servo position.
+    - Period: 20 ms
+    - Delay: 0 ms
+#. Code selection:
+    - Purpose: Reading joystick position and selection of code.
+    - Period: 40 ms
+    - Delay: 5 ms
+#. Gun trigger:
+    - Purpose: Reading status of joystick button and triggering
+      transsmission of selected code.
+    - Period: 40 ms
+    - Delay: 10 ms
+#. Code transmission:
+    - Purpose: Transmission of each individual bit of code.
+    - Period: 0.5 ms (500 us)
+    - Delay: 0.25 ms (250 us)
 
-Here is a diagram of the time-triggered scheduled:
+This schedules each occurence of each task at a different time.
+The most time-critical task is code transmission, because the inter-onset
+of each of its executions is quite important. This task also has
+the shortest period - 500 us, which means that the onset of the task may
+occur at best 250 us away from an onset of a different task. If this
+other task was running for more than 250 us, that would delay the onset
+of the most time-critical task. However, mind that the correct execution of
+this task only matters during the 10-bit transmission. Ideally, this takes
+in total exactly 5 ms. Since onsets of any other pair of tasks are at least
+5 milliseconds appart, the transmission of a code will always fit into such
+a window. Regardless, in our application there is actually no need for
+other tasks to run during code transmission, so all issues could be avoided
+by temporary disabling the other tasks during transmission. We might explore
+this direction in future.
+
+Here is a diagram of one period of the time-triggered scheduled:
 
 <diagram>
+
+Communication
+.............
 
 We have the following state variables:
 
 Here is a diagram of communication:
 
 <diagram>
+
+Scheduler
+.........
+
+We implemented our own task scheduler, according to the
+Time-Triggered Architecture paradigm. The scheduler represents time
+in microseconds using a 32 bit unsigned integer variable which will
+overflow in about 70 minutes. It is possible to implement the scheduler
+so that it will handle most tasks as expected even in the case of overflow,
+as will be explained later.
+
+A task is represented with the following struct::
+
+    typedef uint32_t milliseconds_t;
+
+    typedef void (*task_cb)(void *object);
+
+    typedef struct
+    {
+        void *object;
+        task_cb callback;
+        uint32_t is_enabled;
+        uint32_t period;
+        uint32_t delay;
+        microseconds_t next_time;
+    } task_t;
+
+Each task has a callback function executed at times when the task is scheduled,
+as well as a pointer to an object representing the task state
+passed to the callback. The struct also stores the task period and delay, in
+microseconds. The field ``next_time`` is used by the scheduler as an efficient
+way of knowing the next time when the task should be executed.
+
+The scheduler is initializer using the ``scheduler_init`` function. At
+this moment, it obtains from the chip the current time in
+microseconds since the system was started, and sets
+ the next execution time of each task to the current time
+plus the task's delay.
+
+The ``scheduler_run`` function again obtains the current time from the system
+and compares it to each task's next execution time. If the current time is
+larger than the time of any task, the callback function of the task is
+executed.
+
 
