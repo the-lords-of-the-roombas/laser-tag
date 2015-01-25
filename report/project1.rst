@@ -325,15 +325,16 @@ passed to the callback. The struct also stores the task period and delay, in
 microseconds. The field ``next_time`` is used by the scheduler as an efficient
 way of knowing the next time when the task should be executed.
 
-The scheduler is initializer using the ``scheduler_init`` function. At
+The scheduler is initialized using the ``scheduler_init`` function. At
 this moment, it obtains from the chip the current time in
 microseconds since the system was started, and sets
  the next execution time of each task to the current time
-plus the task's delay.
+plus the task's period.
 
 The ``scheduler_run`` function again obtains the current time from the system
 and compares it to each task's next execution time. If the current time is
 larger than the time of any task, the callback function of the task is
-executed.
+executed. This comparison will fail when the task's scheduled time has
+overflown but the current time hasn't yet.
 
 
