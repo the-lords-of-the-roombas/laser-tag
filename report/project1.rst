@@ -43,9 +43,36 @@ Reading joystick data
 Hardware
 ........
 
+The joystick was wired to two analog inputs on the Arduino board. The x-axis was wired to analog0 and the y-axis 
+was wired to analog1, The joystick switch (registering a press) was wired to digital input 8. The power source 
+was wired with the help of a pull up resistor to assist in recording the value of the joystick switch being pressed.
+
 Software
 ........
 
+The joystick position was polled every 20 ms and the joystick switch was polled every 40ms. Originally we had 
+the joystick switch being polled every 20 ms but we found that this resulted in the system recognizing that it 
+had been pressed more than once. 
+
+The position of the joystick determined which direction and speed the servo would move in. The value reported by
+the joystick was added to the current position of the servo. A larger value reported by the joystick would make the 
+servo move faster than a lower value.::
+
+    // Update control variable and keep it in range 0 to 3000
+    int servo_ctl = jstick->servo_control + step;
+    int range = 3000;
+    if(servo_ctl < 0) servo_ctl = 0;
+    if(servo_ctl > range) servo_ctl = range;
+    jstick->servo_control = servo_ctl;
+
+    // Map control variable to servo degrees and output that to servo
+    int servo_degrees = map(servo_ctl, 0, range, 0, 180);
+    servo.write(servo_degrees);
+	
+We configured the software to detect a press of the joystick when the analog signal was below 90 for
+downward press and above 270 for a upward press. Originally the joystick was reporting a value of 
+between 0 and 1023. However, we placed a resistor in the joystick circuit to be used as a pull up resistor and our 
+range of values dropped to a minimum of 0 and a maximum of 360. 
 
 Selecting transmission code
 ---------------------------
@@ -58,31 +85,13 @@ Hardware
 ........
 
 The hardware used to implement the data transmission rotation was the joystick and two led lights.
-The rotation was detected using a y-axis push from the joystick. The two led lights were setup side by side, to 
-display, in binary, which data the system would emit on a joystick press. No leds being lit would refer to
-a binary code of 0 which we would associate with the letter 'A'. A binary code of 1 would refer to 'B', 2 to 'C', 
-and 3 to 'D'.
-
-The joystick was wired to two analog inputs on the Arduino board. The x-axis was wired to analog0 and the y-axis 
-was wired to analog1, The joystick switch (registering a press) was wired to digital input 8. The power source 
-was wired with the help of a pull up resistor to assist in recording the value of the joystick switch being pressed.
+The two led lights were setup side by side, to display, in binary, which data the system would emit 
+on a joystick press. No leds being lit would refer to a binary code of 0 which we would associate with 
+the letter 'A'. A binary code of 1 would refer to 'B', 2 to 'C', and 3 to 'D'.
 
 Software
 ........
 
-The joystick position was polled every 20 ms and the joystick switch was polled every 40ms. Originally we had 
-the joystick switch being polled every 20 ms but we found that this resulted in the system recognizing that it 
-had been pressed more than once. 
-
-The position of the joystick determined which direction and speed the servo would move in. 
-We configured the software to detect a press of the joystick when the analog signal was below 90 for
-downward press and above 270 for a upward press. Originally the joystick was reporting a value of 
-between 0 and 1023. However, we placed a resistor in the joystick circuit to be used as a pull up resistor and our 
-range of values dropped to a minimum of 0 and a maximum of 360. 
-
-The 
-
-The values to be transmitted were stored in a char array. 
 
 Controlling servo
 -----------------
