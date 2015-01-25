@@ -323,11 +323,75 @@ Here is a diagram of one period of the time-triggered scheduled:
 Communication
 .............
 
-We have the following state variables:
+One challenge with the time-triggered design is communication between
+tasks. Strong separation of tasks makes scheduling more manageable
+and robust, but it opens the question of how communication between tasks
+should be implemented.
 
-Here is a diagram of communication:
+The ultimate goal of a real-time system is of course
+to process real-world inputs and produce real-world outputs.
+In the time-triggered design, this processing is broken down into tasks as
+atomic units of scheduling.
+Some tasks are also atomic units of information flow - they are isolated in that
+they only work with system inputs and outputs.
+In contrast, some tasks may work with information produced by other tasks.
 
-<diagram>
+Let's analyze our information flow and inter-task communication requirements:
+
+.. image:: communication.svg
+
+In the above diagram, tasks are represented as black rectangles.
+System inputs and outputs are represented as red ellipses in grey rectangles
+which represent other physical systems.
+Variables shared between tasks are represented by blue ellipses.
+
+The following state variables are shared between the tasks:
+
+- selected code index
+- transmitted code
+- transmission status
+
+The following describes the nature of inter-task communication:
+
+- The servo control task does not communicate with other tasks,
+  it only works with input from the joystick and output to the servo motor.
+
+- The code selection task reads input from the joystick, updates
+  the selected code index and controls the LED's that indicate current
+  code selection.
+
+- The gun trigger reads the transmission status to determine whether a
+  transmission is currently in progress, and aborts if it is. Otherwise it
+  reads the selected code index, uses it to access
+  a code from an array of available codes and updates the code to be transmitted.
+  It then sets the transmission state to "enabled".
+
+- The code transmission task reads the transmission state variable. If
+  it is enabled, it proceeds by reading one bit from the code to be transmitted
+  and actually transmitting it. If this was the last bit to be transmitted, it
+  updates its status to disabled so that transmission of a new code can be
+  triggered.
+
+
+
+Since all our code runs sequentially, using shared memory between tasks
+is a simple and feasible solution. Nevertheless, the question remains
+how to structure the passing of data from the software engineering
+point of view. Ideally, the code for a task should be agnostic to
+the existence of other tasks and its place in the system as a whole,
+and only expose an interface for input and output of data.
+
+Our solution so far is quite simplistic, but feasible for the currently
+small amount of tasks and shared variables. We tried to group
+state variables into meaningful groups (the ``joystick_state``
+and ``gun_state`` structs). Some tasks only access state in one of these
+groups, hence the code for these tasks resides in separate files.
+However, there are tasks (e.g. the gun trigger task) that facilitate
+the carrying of data between other tasks. Hence, we have
+*task-specific* "glue code" that resides in the main program file and has
+global access. This is less than ideal, and we are contemplating an
+organizatinal principle that would avoid mixing low-level task-specific
+code with high-level task coordination code.
 
 Scheduler
 .........

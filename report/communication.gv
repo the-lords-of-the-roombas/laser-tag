@@ -1,0 +1,54 @@
+digraph {
+  size="5";
+  fontname=Helvetica;
+  node[fontname=Helvetica];
+
+  subgraph cluster_joystick {
+    label="Joystick";
+    style=filled; color=lightgrey;
+    joystick_x [label="X",color="red"];
+    joystick_y [label="Y",color="red"];
+    joystick_btn [label="Press",color="red"];
+  }
+  subgraph cluster_servo {
+    label="Servo";
+    style=filled; color=lightgrey; labelloc=b;
+    servo_angle [label="Angle",color="red"];
+  }
+  subgraph cluster_code_id {
+    label="Code Indicator"; labelloc=b;
+    style=filled; color=lightgrey;
+    code_id_led1 [label="LED 1",color="red"];
+    code_id_led2 [label="LED 2",color="red"];
+  }
+  subgraph cluster_code_tx {
+    label="Code Transmitter";
+    style=filled; color=lightgrey; labelloc=b;
+    code_tx_led [label="LED",color="red"];
+  }
+
+  code_id [label="Code Index",color="blue",style=filled,fillcolor=lightgrey];
+  code [label="Code",color="blue",style=filled,fillcolor=lightgrey];
+  tx_state [label="Transmission State",color="blue",style=filled,fillcolor=lightgrey];
+
+  servo_ctl [label="Servo Control",shape=box];
+  code_ctl [label="Code Selection",shape=box];
+  tx_trig [label="Trigger",shape=box];
+  tx [label="Transmission",shape=box];
+
+  joystick_x -> servo_ctl;
+  joystick_y -> code_ctl;
+  joystick_btn -> tx_trig;
+  servo_ctl -> servo_angle;
+  code_ctl -> code_id_led1;
+  code_ctl -> code_id_led2;
+  code_ctl -> code_id;
+  code_id -> tx_trig;
+  tx_trig -> code;
+  tx_trig -> tx_state;
+  tx_state -> tx;
+  tx_state -> tx_trig;
+  code -> tx;
+  tx -> code_tx_led;
+  tx -> tx_state;
+}
