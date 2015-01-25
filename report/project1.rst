@@ -361,15 +361,60 @@ passed to the callback. The struct also stores the task period and delay, in
 microseconds. The field ``next_time`` is used by the scheduler as an efficient
 way of knowing the next time when the task should be executed.
 
-The scheduler is initializer using the ``scheduler_init`` function. At
+The scheduler is initialized using the ``scheduler_init`` function. At
 this moment, it obtains from the chip the current time in
 microseconds since the system was started, and sets
  the next execution time of each task to the current time
-plus the task's delay.
+plus the task's period::
+
+    void scheduler_init(task_t *t, uint32_t c)
+    {
+        tasks = t;
+        task_count = c;
+
+        microseconds_t now = current_time_micros();
+
+        for(uint32_t task_idx = 0; task_idx < task_count; ++task_idx)
+        {
+            task_t & task = tasks[task_idx];
+            task.next_time = now + task.delay;
+        }
+    }
+
+
 
 The ``scheduler_run`` function again obtains the current time from the system
 and compares it to each task's next execution time. If the current time is
 larger than the time of any task, the callback function of the task is
-executed.
+executed. This comparison will fail when the task's scheduled time has
+overflown but the current time hasn't yet::
 
+    microseconds_t scheduler_run()
+    {
+        microseconds_t now = current_time_micros();
 
+        // FIXME: What to do in case no task?
+        // Here, we are requesting a run at most after 1 second.
+        microseconds_t one_second = 1e6;
+        microseconds_t next_time = now + one_second;
+
+        for(uint32_t task_idx = 0; task_idx < task_count; ++task_idx)
+        {
+            task_t & task = tasks[task_idx];
+
+            bool expired = task.next_time <= now;
+
+            if (expired)
+            {
+                if (task.is_enabled)
+                    task.callback(task.object);
+
+                task.next_time = task.next_time + task.period;
+            }
+
+            if (task.next_time < next_time)
+                next_time = task.next_time;
+        }
+
+        return next_time - now;
+    }
