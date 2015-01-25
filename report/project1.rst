@@ -174,6 +174,16 @@ The timer was configured with the following code::
         // ...
     }
 
+Arduino has the output of the Waveform Generator C of Timer 1 connected to
+its digital pin 13, which was set to output mode::
+
+    void gun_init(gun_state * gun)
+    {
+        //  ...
+        pinMode(13, OUTPUT);
+        //  ...
+    }
+
 In order to generate the bit values according to our IR communcation protocol,
 we enabled the Waveform Generator C output for 500 microseconds for the value 1,
 and disabled it for the value 0::
@@ -190,15 +200,38 @@ and disabled it for the value 0::
         TCCR1A &= ~(1<<COM1C1);
     }
 
-Arduino has the output of the Waveform Generator C of Timer 1 connected to
-its digital pin 13, which was set to output mode::
+Transmission of a byte was performed by a periodic task which transmits one
+bit every period (500 microseconds). The transmission initialization was
+realized by simply transmitting 2 more constant bits (a 1 and a 0) before
+transmitting the byte of information. In total, there is thus 10 bits to
+transmit. These bits were stored in a 16 bit unsigned integer variable
+``gun->code``
+In addition, the periodic transmission task required the information about
+the last transmitted bit index to persist across periods, which was
+stored in the variable ``gun->current_bit``.
+The task is activated by other parts of the system by
+setting the ``gun->enabled`` variable, and the task disables itself after
+transmitting the 10 bits::
 
-    void gun_init(gun_state * gun)
-    {
-        //  ...
-        pinMode(13, OUTPUT);
-        //  ...
-    }
+  void gun_transmit(void *object)
+  {
+      gun_state *gun = (gun_state*)object;
+
+      if (gun->enabled)
+      {
+
+          if((gun->code >> gun->current_bit) & 0x1)
+              gun_send_hi();
+          else
+              gun_send_lo();
+
+          ++gun->current_bit;
+
+          if (gun->current_bit >= 10)
+              gun->enabled = false;
+      }
+  }
+
 
 The big picture
 ---------------
