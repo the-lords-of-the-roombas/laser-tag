@@ -50,12 +50,39 @@ Software
 Selecting transmission code
 ---------------------------
 
+The goal of adding a method for selecting which code was to be transmitted was to
+avoid having to hard-code a 'letter' and change this hard coding when we were
+instructed to transmit to a different receiver. 
+
 Hardware
 ........
+
+The hardware used to implement the data transmission rotation was the joystick and two led lights.
+The rotation was detected using a y-axis push from the joystick. The two led lights were setup side by side, to 
+display, in binary, which data the system would emit on a joystick press. No leds being lit would refer to
+a binary code of 0 which we would associate with the letter 'A'. A binary code of 1 would refer to 'B', 2 to 'C', 
+and 3 to 'D'.
+
+The joystick was wired to two analog inputs on the Arduino board. The x-axis was wired to analog0 and the y-axis 
+was wired to analog1, The joystick switch (registering a press) was wired to digital input 8. The power source 
+was wired with the help of a pull up resistor to assist in recording the value of the joystick switch being pressed.
 
 Software
 ........
 
+The joystick position was polled every 20 ms and the joystick switch was polled every 40ms. Originally we had 
+the joystick switch being polled every 20 ms but we found that this resulted in the system recognizing that it 
+had been pressed more than once. 
+
+The position of the joystick determined which direction and speed the servo would move in. 
+We configured the software to detect a press of the joystick when the analog signal was below 90 for
+downward press and above 270 for a upward press. Originally the joystick was reporting a value of 
+between 0 and 1023. However, we placed a resistor in the joystick circuit to be used as a pull up resistor and our 
+range of values dropped to a minimum of 0 and a maximum of 360. 
+
+The 
+
+The values to be transmitted were stored in a char array. 
 
 Controlling servo
 -----------------
@@ -73,7 +100,7 @@ Emitting code over IR
 The requirement was to transmit 1 byte of information encoded as modulation
 of IR emission:
 
-- A bit of transmition is represented as the binary choice between:
+- A bit of transmission is represented as the binary choice between:
     - Oscillation between full and zero emission amplitude at 38kHz (value 1)
     - Constant zero emission amplitude (value 0).
 - The length of each bit is 500 microseconds, meaning that emission should
