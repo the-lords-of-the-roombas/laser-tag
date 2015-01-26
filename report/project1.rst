@@ -130,12 +130,12 @@ data 'letters' would be incremented or decremented depending on an up or down pu
 Controlling servo
 -----------------
 
-The servo is controlled entirely by the joystick.
+The servo is controlled entirely by the x-axis on the joystick. 
 
 Hardware
 ........
 
-The servo signal is connected to the digital 9 pin on the Arduino board.
+The servo signal in is connected to the digital 9 pin on the Arduino board.
 
 Software
 ........
