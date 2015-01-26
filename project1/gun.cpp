@@ -69,7 +69,6 @@ void gun_trigger(gun_state * gun, uint8_t code)
 void gun_transmit(void *object)
 {
     gun_state *gun = (gun_state*)object;
-    digitalWrite(4, HIGH);
 
     if (gun->enabled)
     {
@@ -84,6 +83,4 @@ void gun_transmit(void *object)
         if (gun->current_bit >= 10)
             gun->enabled = false;
     }
-
-    digitalWrite(4, LOW);
 }

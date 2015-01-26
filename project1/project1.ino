@@ -9,7 +9,6 @@ static const char codes[4] = { 'A', 'B', 'C', 'D' };
 
 static const int code_indicator_lo_pin = 2;
 static const int code_indicator_hi_pin = 3;
-static const int task_duration_pin = 4;
 
 static gun_state gun;
 static joystick_state joystick;
@@ -63,23 +62,56 @@ void print_something()
     Serial.println("TASK IS RUNNING");
 }
 
+void time_servo_control(void *object)
+{
+    digitalWrite(4, HIGH);
+    joystick_read_position_and_control_servo(object);
+    digitalWrite(4, LOW);
+}
+void time_gun_trigger(void *object)
+{
+    digitalWrite(5, HIGH);
+    detect_joystick_press_and_shoot(object);
+    digitalWrite(5, LOW);
+}
+void time_code_selection(void *object)
+{
+    digitalWrite(6, HIGH);
+    update_current_code(object);
+    digitalWrite(6, LOW);
+}
+void time_code_transmission(void *object)
+{
+    digitalWrite(7, HIGH);
+    gun_transmit(object);
+    digitalWrite(7, LOW);
+}
+
 void setup()
 {
     Serial.begin(9600);
 
     pinMode(code_indicator_lo_pin, OUTPUT);
     pinMode(code_indicator_hi_pin, OUTPUT);
-    pinMode(task_duration_pin, OUTPUT);
+    pinMode(4, OUTPUT);
+    pinMode(5, OUTPUT);
+    pinMode(6, OUTPUT);
+    pinMode(7, OUTPUT);
 
     joystick_init(&joystick);
     gun_init(&gun);
 
     //scheduler_task_init(tasks+0, 0, 500e3, &print_something);
-
+/*
     scheduler_task_init(tasks+0, 0, 20e3, &joystick_read_position_and_control_servo, &joystick);
     scheduler_task_init(tasks+1, 5e3, 40e3, &detect_joystick_press_and_shoot, 0);
     scheduler_task_init(tasks+2, 10e3, 40e3, &update_current_code, 0);
     scheduler_task_init(tasks+3, 250, 500, &gun_transmit, &gun);
+*/
+    scheduler_task_init(tasks+0, 0, 20e3, &time_servo_control, &joystick);
+    scheduler_task_init(tasks+1, 5e3, 40e3, &time_gun_trigger, 0);
+    scheduler_task_init(tasks+2, 10e3, 40e3, &time_code_selection, 0);
+    scheduler_task_init(tasks+3, 250, 500, &time_code_transmission, &gun);
 
     scheduler_init(tasks, task_count);
 
