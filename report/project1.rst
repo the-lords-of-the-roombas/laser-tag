@@ -85,7 +85,7 @@ Hardware
 The hardware used to implement the data transmission rotation was the joystick and two led lights. 
 An up press on the joystick would result in the rotation of the data codes in a forward direction. 
 A down press would rotate through the codes in reverse. 
-The two led lights were setup side by side, to display, in binary, which data the system would emit 
+The two led lights were setup side by side to display, in binary, which data the system would emit 
 on a joystick press. No leds being lit would refer to a binary code of 0 which we would associate with 
 the letter 'A'. A binary code of 1 would refer to 'B', 2 to 'C', and 3 to 'D'.
 
@@ -130,12 +130,36 @@ data 'letters' would be incremented or decremented depending on an up or down pu
 Controlling servo
 -----------------
 
+The servo is controlled entirely by the joystick.
+
 Hardware
 ........
+
+The servo signal is connected to the digital 9 pin on the Arduino board.
 
 Software
 ........
 
+The software was designed with two concepts in mind. First we wanted the 
+speed of servo to increase with a stronger push on the joystick. This was
+accomplished by adding the value of the joystick to the current value of the 
+servo, as mentioned above. Secondly, we noticed that the servo would shake slightly when 
+the joystick wasn't being touched. We determined this was because the joystick was reporting
+a slight fluctuation in the value it was reporting. When at dead center, it wouldn't report a 
+steady 180, instead it fluctuated slightly. This tiny fluctuation was causing the servo to buzz.
+To fix this we simply filtered out a slight portion in the middle of the mapped values of the x-axis.
+We mapped the value of the x-axis to a range of -100 to 100 and filtered out values between -10 to 10.::
+
+	// Map input to range -100 to 100
+    int step = map(in, 0, 380, -100, 100);
+
+    // Don't do anything if inside the range -10 to 10
+    if (step >= 10)
+        step -= 10;
+    else if (step <= -10)
+        step += 10;
+    else
+        return;
 
 Emitting code over IR
 ---------------------
