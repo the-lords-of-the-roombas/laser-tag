@@ -37,7 +37,7 @@ The following hardware components were used in the project:
 - Servo motor
 - Infra-red emitter (IR LED)
 - Two status-indicator LEDs
-- Power supply
+- 5V power supply
 
 Reading joystick data
 ---------------------
