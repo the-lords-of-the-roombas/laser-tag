@@ -6,7 +6,7 @@ struct filter_state
     int out_1;
 };
 
-inline int filter_init(filter_state *f)
+inline void filter_init(filter_state *f)
 {
     f->out_1 = 0;
 }
