@@ -11,7 +11,7 @@ Overview
 ********
 
 Here is a high-level overview of the requirements of this project, as well
-as out extensions:
+as our extensions:
 
 Requirements:
   - Joystick controls arm of servo motor to aim attached
