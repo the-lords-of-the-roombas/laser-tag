@@ -495,9 +495,26 @@ other tasks to run during code transmission, so all issues could be avoided
 by temporary disabling the other tasks during transmission. We might explore
 this direction in future.
 
-Here is a diagram of one period of the time-triggered scheduled:
+We verified the timing of the tasks by having each task set a digital
+output pin to HIGH at start and back to LOW at end, and monitoring these
+pins as well as the code transmission output with a logic analyzer:
 
-<diagram>
+.. image:: full_schedule.png
+
+- Channel 0: Servo control task
+- Channel 1: Gun trigger task
+- Channel 2: Code selection task
+- Channel 3: Code transmission task
+- Channel 4: Code transmission PWM output
+
+The diagram shows one entire period of the schedule, which also contains
+an occurence of code transmission. The code transmitted in this case
+was binary 1000001. We can see the initial two bits (10) followed by the code.
+
+Below is a close up on the code transmission PWM output for a 1-valued bit:
+
+.. image:: schedule_shot_detail.png
+
 
 Communication
 .............
