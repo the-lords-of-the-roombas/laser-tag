@@ -1,8 +1,8 @@
 CSC 460/560: Design and Analysis of Real-Time Systems
 =====================================================
 
-Project 1
-=========
+Project 1 - Phase1
+==================
 
 Authors: Darren Prince and Jakob Leben
 
@@ -10,156 +10,257 @@ Authors: Darren Prince and Jakob Leben
 Overview
 ********
 
+Here is a high-level overview of the requirements of this project, as well
+as out extensions:
+
 Requirements:
+  - Joystick controls arm of servo motor to aim attached
+    infra-red (IR) emitter (LED) towards target.
+  - Joystick button triggers transmission of a byte of information (code)
+    towards target, in form of modulation of IR emission.
+  - There are 4 different targets - IR receivers: each requires reception of
+    a different code to count as a hit. The system must be able to hit all 4.
+  - Software uses time-triggered architecture.
 
-- Joystick controls servo to aim attached IR emitter towards target.
-- Joystick button triggers emission of a code as IR modulation.
-- Software uses time-triggered architecture.
-
-Additional:
-
-- Joystick allows selection of one of a predefined set of codes to
-  be emitted.
-- A set of LED lights indicates index of selected code in binary form.
+Extensions:
+  - Joystick allows selection of one of a predefined set of codes to
+    be emitted.
+  - A set of LED lights indicates index of selected code in binary form.
 
 Components
 **********
 
-(Add details)
+The following hardware components were used in the project:
 
 - Arduino Mega 2560 (http://www.arduino.cc/)
-- Joystick...
-- Servo motor...
-- IR emitter...
+- Joystick
+- Servo motor
+- Infra-red emitter (IR LED)
 - Power supply
-- ...
-
-How each component operates?
-
 
 Reading joystick data
 ---------------------
 
-The joystick is the main piece of hardware controlling the system. It controls the motion of the servo, the rotation 
-through data codes to be sent, and also acts as a trigger to begin transmission of data over IR. 
+The joystick is the main piece of hardware controlling the system. It provides
+voltage signals modulated by its tilt along two axes independently, as well as
+a current switch operated by a downward push of the joystick. The tilt along
+one axis is used to control the motion of the servo motor, while the tilt
+along another axis is used for selection of a code to be transmitted. The
+switch acts as a trigger to begin the transmission of data over IR.
 
 Hardware
 ........
 
-The joystick was wired to two analog inputs on the Arduino board. The x-axis was wired to analog0 and the y-axis 
-was wired to analog1. The joystick switch (registering a press) was wired to digital input 8. The power source 
-was wired with the help of a pull up resistor to assist in recording the value of the joystick switch being pressed.
+The joystick has 5 pins, connected to the system as follows:
+
+- +5V -> power supply
+- GND -> system ground
+- X (voltage modulated by x-axis tilt) -> Arduino analog input 0
+- Y (voltage modulated by y-axis tils) -> Arduino analog input 1
+- SW (current switched by downward push) -> Arduino digital pin 8
+
+We placed a resistor in series between the joystick +5V pin and the power supply
+to act as a pull-up resistor such that operation of the switch results in a solid
+distinction between 0V and 5V on the SW pin.
 
 Software
 ........
 
-The joystick x-axis position was polled every 20 ms and the joystick switch was polled every 40ms. Originally we had 
-the joystick switch being polled every 20 ms but we found that this resulted in the system recognizing that it 
-had been pressed more than once. 
+The software polls the Arduino analog input 0 every 20 ms to sample
+the joystick x-axis tilt. At every sampling, the information is immediately
+applied to control the motion of the servo motor, as described in a section
+below.
 
-The x-axis position of the joystick determines which direction and speed the servo would move in. The value reported by
-the joystick was added to the current position of the servo to create the new location of the servo. A larger value 
-reported by the joystick would make the servo move faster than a lower value.::
+The Arduino analog input 1 is polled every 40 ms to sample the
+joystick y-axis tilt. This is used for selection of data to be transmitted
+on joystick push, as described in a section below.
 
-    // Update control variable and keep it in range 0 to 3000
-    int servo_ctl = jstick->servo_control + step;
-    int range = 3000;
-    if(servo_ctl < 0) servo_ctl = 0;
-    if(servo_ctl > range) servo_ctl = range;
-    jstick->servo_control = servo_ctl;
+The state of the joystick switch was sampled by reading the Arduino digital
+pin 8. The digital pins can act as inputs or outputs, so the pin is
+explicitly placed into the input mode at system startup. Upon activation of the
+switch (pushing of the joystick), the software begins transmission of the
+data code over IR, as explained in detail in a section below.
+The switch input is sampled every 40 ms.
 
-    // Map control variable to servo degrees and output that to servo
-    int servo_degrees = map(servo_ctl, 0, range, 0, 180);
-    servo.write(servo_degrees); 
+The difference in sampling periods of the different inputs is supported
+by the time-sensitivity of the tasks. The servo motor control code occurs
+every 20 ms to allow smooth movement of the motor.
+
+Controlling servo
+-----------------
+
+Hardware
+........
+
+The servo motor has 3 pins, connected to the system as follows:
+
+- +5V -> power supply
+- GND -> system ground
+- S (pulse-width control signal) -> Arduino digital pin 9.
+
+Software
+........
+
+The servo motor is controlled in the following way: the amount of
+joystick tilt along the x-axis controls the direction and speed of rotation
+of the motor arm; central position means no movement, joystick displacement in
+one direction controls speed of rotation in one direction, and conversely
+displacement in the opposite direction.
+This allows easier control of the motor than
+applying the tilt directly to the angle of the motor arm.
+
+The Arduino "Servo" library is used to produce servo control signal on
+Arduino digital pin 9. Using the stock Servo library conflicts with
+custom use of the Arduino chip's timers for transmission of data over IR.
+This was solved by modifying the library, as explained in the section on
+IR data transmission below.
+
+Arduino analog pin 0 is polled every 20 ms to obtain the control value.
+Although the full range of the input is translated by Arduino library to
+numerical value in the range of 0 to 1024, the range of our input is
+reduced to 380 due to the pull-up resistor required for operation of the
+joystick switch. Moreover, we found two issues with the quality of the input:
+
+1. The input is unsteady, there is noticeable noise present (fluctuation
+   within about 2% of the total signal range)
+2. The relation between joystick tilt and the system input is highly non-linear.
+
+These issues are indicators of poor quality of the joystick and perhaps
+also Arduino's analog input.
+
+The first issue could cause the motor to move even when joystick is not
+touched. This is solved by disregarding the input fluctuation around the
+central point. After scaling the input to a range of -100 to 100
+(such that 0 corresponds to central joystick position),
+we translated all values between -10 and 10 to a constant 0 and performed
+no control action. Moreover, the signal is passed through a first-order
+low-pass IIR filter for smoothing (also implemented by the same authors)::
+
+  void joystick_read_position_and_control_servo(void*object)
+  {
+      joystick_state* jstick = (joystick_state*)object;
+
+      // Lo-pass filter the input
+      int in_raw = analogRead(x_pin);
+      int in = filter_process(&jstick->filter, in_raw);
+
+      // Map input to range -100 to 100
+      int step = map(in, 0, 380, -100, 100);
+
+      // Don't do anything if inside the range -10 to 10
+      if (step >= 10)
+          step -= 10;
+      else if (step <= -10)
+          step += 10;
+      else
+          return;
+
+      // ...
+  }
+
+The second issue (non-linear control-to-signal relation) is not yet
+addressed in our solution, but it was found to not cause much trouble
+in this application.
+
+Finally, the value of the input is added to a state variable persistent
+across input samplings which represents the desired motor arm angle. This
+value is converted to a number of degrees between 0 and 180, and sent to
+the motor control output on Arduino digital pin 9, with the help of the
+Arduino "Servo" library::
+
+  void joystick_read_position_and_control_servo(void*object)
+  {
+      // ...
+
+      // Update control variable and keep it in range 0 to 3000
+      int servo_ctl = jstick->servo_control + step;
+      int range = 3000;
+      if(servo_ctl < 0) servo_ctl = 0;
+      if(servo_ctl > range) servo_ctl = range;
+      jstick->servo_control = servo_ctl;
+
+      // Map control variable to servo degrees and output that to servo
+      int servo_degrees = map(servo_ctl, 0, range, 0, 180);
+      servo.write(servo_degrees);
+  }
+
 
 Selecting transmission code
 ---------------------------
 
 The goal of adding a method for selecting which code was to be transmitted was to
-avoid having to hard-code a 'letter' and change this hard coding when we were
-instructed to transmit to a different receiver. 
+avoid having to hard-code a transmission code and change this hard coding whenever
+we require transmission to a different receiver that expects a different code.
+
+The currently selected code is indicated by two LED lights, each representing
+a bit of information (light on = 1, light off = 0), and thus being able to
+indicate one of the 4 distinct codes.
+
+The interaction is designed so that tilting the joystick along the y axis
+all the way out of the central position causes selection of the next code
+in the sequence. Repeating the action requires return of the joystick back
+to the central position. Repeated action cycles across the available codes,
+and direction of joystick tilt determines direction of cycling.
 
 Hardware
 ........
 
-The hardware used to implement the data transmission rotation was the joystick and two led lights. 
-An up press on the joystick would result in the rotation of the data codes in a forward direction. 
-A down press would rotate through the codes in reverse. 
-The two led lights were setup side by side to display, in binary, which data the system would emit 
-on a joystick press. No leds being lit would refer to a binary code of 0 which we would associate with 
-the letter 'A'. A binary code of 1 would refer to 'B', 2 to 'C', and 3 to 'D'.
+The two LEDs are connected to the system ground, and to Arduino digital pins 2
+and 3.
 
 Software
 ........
 
-Polling of the y-axis on the joystick occurs every 40 ms. 
-We configured the software to detect a press of the joystick when the analog signal was below 90 for
-downward press and above 270 for an upward press. Originally the joystick was reporting a value of 
-between 0 and 1023. However, when we placed a resistor in the joystick circuit to be used as a pull up resistor, our 
-range of values dropped to a minimum of 0 and a maximum of 360. When a press was detected, the value of the array containing the 
-data 'letters' would be incremented or decremented depending on an up or down push.::
+The Arduino analog input 1 is polled every 40 ms to receive the joystick y-axis
+tilt, which is provided by the Arduino library as a numerical value in
+the range of 0 to 380 (reduced range as explained above). If the input
+value is in the lower quarter of the range, it is mapped to -1, the upper
+quarter is mapped to 1, and the rest to 0. This value is compared
+to its equivalent computed at the previous sampling to detect change.
+If the change is from 0 to -1 or from 0 to 1, then the value is added to
+the current selected code index. The index is wrapped to the range 0 to 3
+to correpond to the 4 available distinct codes::
 
-	void joystick_update_code_selection(void *object)
-	{
-		joystick_state* jstick = (joystick_state*)object;
+    void joystick_update_code_selection(void *object)
+    {
+      joystick_state* jstick = (joystick_state*)object;
 
-		int y = analogRead(y_pin);
-		int joystick_state;
-		if (y < 90)
-			joystick_state = -1;
-		else if(y > 270)
-			joystick_state = 1;
-		else
-			joystick_state = 0;
+      int y = analogRead(y_pin);
+      int joystick_state;
+      if (y < 90)
+        joystick_state = -1;
+      else if(y > 270)
+        joystick_state = 1;
+      else
+        joystick_state = 0;
 
-		if (joystick_state != jstick->previous_joystick_y_state && joystick_state)
-		{
-			int code_idx = jstick->code_idx + joystick_state;
-			if (code_idx >= 4)
-				code_idx = 0;
-			else if(code_idx < 0)
-				code_idx = 3;
-			jstick->code_idx = code_idx;
-		}
+      if (joystick_state != jstick->previous_joystick_y_state && joystick_state)
+      {
+        int code_idx = jstick->code_idx + joystick_state;
+        if (code_idx >= 4)
+          code_idx = 0;
+        else if(code_idx < 0)
+          code_idx = 3;
+        jstick->code_idx = code_idx;
+      }
 
-		jstick->previous_joystick_y_state = joystick_state;
-	}
+      jstick->previous_joystick_y_state = joystick_state;
+    }
 
+The two indicator LEDs are then controlled by setting the pins 2 and 3 to
+the value of each of 2 bits representing the code index, respectively::
 
-
-Controlling servo
------------------
-
-The servo is controlled entirely by the x-axis on the joystick. 
-
-Hardware
-........
-
-The servo signal in is connected to the digital 9 pin on the Arduino board.
-
-Software
-........
-
-The software was designed with two concepts in mind. First we wanted the 
-speed of servo to increase with a stronger push on the joystick. This was
-accomplished by adding the value of the joystick to the current value of the 
-servo, as mentioned above. Secondly, we noticed that the servo would shake slightly when 
-the joystick wasn't being touched. We determined this was because the joystick was reporting
-a slight fluctuation in the value it was reporting. When at dead center, it wouldn't report a 
-steady 180, instead it fluctuated slightly. This tiny fluctuation was causing the servo to buzz.
-To fix this we simply filtered out a slight portion in the middle of the mapped values of the x-axis.
-We mapped the value of the x-axis to a range of -100 to 100 and filtered out values between -10 to 10.::
-
-	// Map input to range -100 to 100
-    int step = map(in, 0, 380, -100, 100);
-
-    // Don't do anything if inside the range -10 to 10
-    if (step >= 10)
-        step -= 10;
-    else if (step <= -10)
-        step += 10;
-    else
-        return;
+    void update_current_code(void*)
+    {
+        int old_code_idx = joystick_code_index(&joystick);
+        joystick_update_code_selection(&joystick);
+        int code_idx = joystick_code_index(&joystick);
+        // ...
+        int code_low_bit = (code_idx >> 0) & 0x1;
+        int code_hi_bit = (code_idx >> 1) & 0x1;
+        digitalWrite(code_indicator_lo_pin, code_low_bit ? HIGH : LOW);
+        digitalWrite(code_indicator_hi_pin, code_hi_bit ? HIGH : LOW);
+    }
 
 Emitting code over IR
 ---------------------
@@ -192,12 +293,40 @@ pin of the IR LED was thus connected to this pin, in addition to connecting
 the ground pins of the two devices. Moreover, the amount of current drawn
 from the Arduino was limited with a resistor.
 
-<diagram>
-
 Software
 ........
 
-A challenge arises because the Arduino library only allows PWM generation at
+The Arduino digital pin 8 is polled every 40 ms to obtain the value of
+the joystick switch. This is simply provided by the Arduino library
+as a boolean true or false value. The swich in combination with the pull-up
+resistors operates so that joystick press results in a digital LOW
+(boolean false), while the natural state is digital HIGH (boolean true).
+This value is compared by its state at the previous input sampling,
+and if it changes from HIGH to LOW (the joystick is pressed), then the
+code transmission is initiated::
+
+    void joystick_read_pressed(void *object)
+    {
+        joystick_state* jstick = (joystick_state*)object;
+        jstick->is_pressed = !digitalRead(sw_pin);
+    }
+
+    void detect_joystick_press_and_shoot(void*)
+    {
+        bool was_pressed = joystick_is_pressed(&joystick);
+        joystick_read_pressed(&joystick);
+        bool is_pressed = joystick_is_pressed(&joystick);
+
+        if (!was_pressed && is_pressed)
+        {
+            int code_idx = joystick_code_index(&joystick);
+            char code = codes[code_idx];
+            gun_trigger(&gun, code);
+        }
+    }
+
+A challenge arises in implementation of code transmission:
+the Arduino library only allows PWM generation at
 a fixed frequency, which is not our desired frequency of 38kHz.
 Therefore, we used the AVR C library to precisely configure a chip's
 hardware timer and its PWM waveform generation by explicitely setting
@@ -222,20 +351,18 @@ number 5, and we only need one instance::
     #define _useTimer3
     #define _useTimer4
 
-We could then use the timer 1 for our purpose.
 In order to generate a 38kHz PWM signal we need to make the timer counter reset
-every 1/38000 seconds, that is about 26.316 microseconds.
-With our chip's 16MHz clock speed, no clock pre-scaler and a 16 bit counter
-register, that corresponds to about 421 clock cycles with no counter register
-overflow. This was calculated using the online
-`timer calculator`__ by Frank Zhao. In the timer's Fast PWM mode, the
+every 1/38000 seconds, which is about 26.316 microseconds.
+With our chip's 16MHz clock speed and no clock pre-scaling that corresponds
+to about 421 clock cycles. The chip's 16 bit counter register can hold this
+value, so no counter overflow is involved.
+
+In the timer's Fast PWM mode, the
 counter will reset when reaching the value in the Output-Compare Register A,
 which was set to 412. We generated a 50% PWM signal using the
 Waveform Generator C, by setting the  Output-Compare Register C to 210.
 
-.. __: http://eleccelerator.com/avr-timer-calculator/
-
-The timer was configured with the following code::
+The timer 1 was configured with the following code::
 
     #define GUN_TIMER_TOP 421
     #define GUN_TIMER_HALF 210
@@ -325,12 +452,6 @@ transmitting the 10 bits::
               gun->enabled = false;
       }
   }
-
-
-The big picture
----------------
-
-Complete electrical diagram
 
 
 Task scheduling and communication
