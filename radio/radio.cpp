@@ -5,7 +5,7 @@
  *      Author: Neil MacMillan
  */
 #include "radio.h"
-#include "LED.h"
+//#include "LED.h"
 
 // debug
 #define DEBUG_1_HIGH	PORTH |= _BV(PH3)
@@ -227,7 +227,7 @@ static void configure_registers()
 
 void Radio_Init()
 {
-	LED_STATUS_ON()	;
+	//LED_STATUS_ON()	;
 	transmit_lock = 0;
 	DEBUG_INIT;
 	DEBUG_2_LOW;
