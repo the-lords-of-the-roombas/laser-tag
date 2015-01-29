@@ -46,30 +46,27 @@ void setup()
 
 void loop()
 {
-	
   // send the data
   Radio_Transmit(&packet, RADIO_WAIT_FOR_TX);
-                /*
-                for(;;){
-                    // wait for the ACK reply to be transmitted back.
-		    if (rxflag)
-      		    {
-      			// remember always to read the packet out of the radio, even
-      			// if you don't use the data.
-      			
-                              if (Radio_Receive(&packet) != RADIO_RX_MORE_PACKETS)
-      			{
-      				// if there are no more packets on the radio, clear the receive flag;
-      				// otherwise, we want to handle the next packet on the next loop iteration.
-      				rxflag = 0;
-      			}
-      			if (packet.type == ACK)
-      			{
-      				digitalWrite(13, HIGH);
-      			}
-      		    }
-                }
-*/
+      //loop to check i rxflag is set          
+      for(;;){
+          // wait for the ACK reply to be transmitted back.
+          if (rxflag)
+          {
+      		// remember always to read the packet out of the radio, even
+      		// if you don't use the data.
+      		if (Radio_Receive(&packet) != RADIO_RX_MORE_PACKETS)
+      		{
+      		        // if there are no more packets on the radio, clear the receive flag;
+      			// otherwise, we want to handle the next packet on the next loop iteration.
+      			rxflag = 0;
+      		}
+      		if (packet.type == ACK)
+      		{
+      			digitalWrite(13, HIGH);
+      		}
+            }
+        }
 delay(5000);
 }
  
