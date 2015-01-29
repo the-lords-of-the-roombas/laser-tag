@@ -5,7 +5,6 @@
  *      Author: Neil MacMillan
  */
 #include "radio.h"
-//#include "LED.h"
 
 // debug
 #define DEBUG_1_HIGH	PORTH |= _BV(PH3)
