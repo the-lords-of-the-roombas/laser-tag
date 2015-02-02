@@ -16,7 +16,9 @@ void joystick_read(state* s)
   int x = analogRead(x_pin);
   int y = analogRead(y_pin);
 
-  // TODO: scale x and y to range 0 - 100;
+  // FIXME: joystick original range may be smaller:
+  x = map(x, 0, 1024, -100, 100);
+  y = map(y, 0, 1024, -100, 100);
 
   bool sw = !digitalRead(sw_pin);
 
