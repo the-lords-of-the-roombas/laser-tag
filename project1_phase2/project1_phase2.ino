@@ -3,6 +3,7 @@
 #include "state.h"
 #include "joystick.h"
 #include "drive.h"
+#include "scheduler.h"
 
 volatile uint8_t rxflag = 0;
  
@@ -13,6 +14,9 @@ static uint8_t station_addr[5] = { 0xAB, 0xAB, 0xAB, 0xAB, 0xAB };
 static uint8_t my_addr[5] = { 0x41, 0x32, 0x54, 0x32, 0x10 };
 
 static state system_state;
+
+static const int task_count = 2;
+static task_t tasks[task_count];
 
 void setup()
 {
@@ -40,19 +44,16 @@ void setup()
 
   joystick_init(&system_state);
   drive_init(&system_state);
+
+  scheduler_task_init(tasks+0, 0, 50e3, &joystick_read, &system_state);
+  scheduler_task_init(tasks+1, 25e3, 50e3, &drive, &system_state);
 }
 
 void loop()
 {
   // FIXME: use scheduler
 
-  joystick_read(&system_state);
-
-  delay(25);
-
-  drive(&system_state);
-
-  delay(25);
+  scheduler_run();
 }
  
 void radio_rxhandler(uint8_t pipe_number)

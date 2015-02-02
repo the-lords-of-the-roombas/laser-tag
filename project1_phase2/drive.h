@@ -5,6 +5,6 @@
 
 void drive_init(state*);
 
-void drive(state*);
+void drive(void*);
 
 #endif // UVIC_RTSYS_DRIVE_INCLUDED

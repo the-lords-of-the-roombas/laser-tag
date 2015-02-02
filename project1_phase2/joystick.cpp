@@ -11,8 +11,10 @@ void joystick_init(state* s)
   digitalWrite(sw_pin, HIGH);
 }
 
-void joystick_read(state* s)
+void joystick_read(void* data)
 {
+  state *s = (state*)data;
+
   int x = analogRead(x_pin);
   int y = analogRead(y_pin);
 

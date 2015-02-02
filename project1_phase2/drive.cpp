@@ -7,8 +7,10 @@ void drive_init(state* s)
   s->speed = 0;
 }
 
-void drive(state* s)
+void drive(void * data)
 {
+  state * s = (state*) data;
+
   int x = s->x;
   int y = s->y;
 
