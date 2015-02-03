@@ -76,7 +76,7 @@ typedef enum _ed {
 	ENABLE=1,
 } ON_OFF;		// there's got to be a better name for this.
 
-void Radio_Init();
+void Radio_Init(uint8_t channel);
 
 
 /**

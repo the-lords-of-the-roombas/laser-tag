@@ -16,7 +16,6 @@
 
 // non-public constants and macros
 
-#define CHANNEL 102
 #define ADDRESS_LENGTH 5
 
 // Pin definitions for chip select and chip enable on the radio module
@@ -187,7 +186,7 @@ static void reset_pipe0_address()
  * This configures the radio to its max-power, max-packet-header-length settings.  If you want to reduce power consumption
  * or increase on-air payload bandwidth, you'll have to change the config.
  */
-static void configure_registers()
+static void configure_registers(uint8_t channel)
 {
 	uint8_t value;
 
@@ -204,7 +203,7 @@ static void configure_registers()
 	set_register(SETUP_RETR, &value, 1);
 
 	// Set to use 2.4 GHz channel 110.
-	value = CHANNEL;
+	value = channel;
 	set_register(RF_CH, &value, 1);
 
 	// Set radio to 2 Mbps and high power.  Leave LNA_HCURR at its default.
@@ -224,7 +223,7 @@ static void configure_registers()
 	send_instruction(FLUSH_RX, NULL, NULL, 0);
 }
 
-void Radio_Init()
+void Radio_Init(uint8_t channel)
 {
 	//LED_STATUS_ON()	;
 	transmit_lock = 0;
@@ -253,7 +252,7 @@ void Radio_Init()
 	_delay_ms(11);
 
 	// Configure the radio registers that are not application-dependent.
-	configure_registers();
+	configure_registers(channel);
 
 	// A 1.5 ms delay is required between power down and power up states (controlled by PWR_UP bit in CONFIG)
 	_delay_ms(2);
