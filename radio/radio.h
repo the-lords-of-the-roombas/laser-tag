@@ -76,6 +76,10 @@ typedef enum _ed {
 	ENABLE=1,
 } ON_OFF;		// there's got to be a better name for this.
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void Radio_Init(uint8_t channel);
 
 
@@ -156,5 +160,9 @@ uint8_t Radio_Success_Rate();
  * Flush the radio's Rx and Tx FIFOs.
  */
 void Radio_Flush();
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* RADIO_H_ */

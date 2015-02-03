@@ -21,6 +21,10 @@
 #include <avr/io.h>
 #include <stdlib.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * Initialize the SPI port as a master.
  * This function must be called once before using the SPI interface.
@@ -48,6 +52,8 @@ void SPI_Write_Block (uint8_t * data, uint8_t len);
  */
 uint8_t SPI_Write_Byte (uint8_t data);
 
-
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* SPI_H_ */

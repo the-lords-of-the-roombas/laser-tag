@@ -19,12 +19,20 @@ void joystick_read(void* data)
   int y = analogRead(y_pin);
   bool sw = digitalRead(sw_pin);
 
+#if 0
+  Serial.print("x: ");
+  Serial.println(x);
+  Serial.print("y: ");
+  Serial.println(y);
+  Serial.print("sw: ");
+  Serial.println(sw);
+#endif
 
   // FIXME: joystick original range may be smaller:
   x = map(x, 0, 350, -100, 100);
   y = map(y, 0, 350, -100, 100);
 
-  s->x = x;
-  s->y = y;
-  s->sw = !sw;
+  s->joystick.x = x;
+  s->joystick.y = y;
+  s->joystick.pressed = !sw;
 }
