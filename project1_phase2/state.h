@@ -25,7 +25,6 @@ struct state
   } shoot;
 
   radiopacket_t tx_packet;
-  radiopacket_t rx_packet;
 };
 
 #endif // UVIC_RTSYS_STATE_INCLUDED

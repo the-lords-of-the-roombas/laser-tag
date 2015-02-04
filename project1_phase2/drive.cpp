@@ -1,5 +1,6 @@
 #include "drive.h"
 #include "radio.h"
+#include "utilities.h"
 #include "Arduino.h"
 
 void drive_init(state* s)
@@ -48,10 +49,13 @@ void drive(void * data)
 
   int16_t speed;
 
-  if (y > 20)
-    speed = 300;
+  // If turning, use a small speed
+  if (x < -20 || x > 20)
+    speed = 100;
+  else if (y > 20)
+    speed = 200;
   else if (y < -20)
-    speed = -300;
+    speed = -200;
   else
     speed = 0;
 
@@ -86,36 +90,33 @@ void drive(void * data)
   s->speed = speed;
 #endif
 
-#if 0
-  Serial.print("radius: ");
-  Serial.println(radius);
-  Serial.print("speed: ");
-  Serial.println(speed);
+#if 1
+  //Serial.println("drive");
+  //Serial.println(radius);
+  //Serial.print("speed: ");
+  //Serial.println(speed);
 #endif
 
   // send to radio
-#if 0
-  char *radius_bytes = (char*)(&radius);
-  char *speed_bytes = (char*)(&speed);
-
+#if 1
   s->tx_packet.type = COMMAND;
   s->tx_packet.payload.command.command = 137;
   s->tx_packet.payload.command.num_arg_bytes = 4;
-  s->tx_packet.payload.command.arguments[0] = speed_bytes[0];
-  s->tx_packet.payload.command.arguments[1] = speed_bytes[1];
-  //s->tx_packet.payload.command.arguments[2] = radius_bytes[0];
-  //s->tx_packet.payload.command.arguments[3] = radius_bytes[1];
-  s->tx_packet.payload.command.arguments[2] = 0x80;
-  s->tx_packet.payload.command.arguments[3] = 0x00;
+  s->tx_packet.payload.command.arguments[0] = HIGH_BYTE(speed);
+  s->tx_packet.payload.command.arguments[1] = LOW_BYTE(speed);
+  s->tx_packet.payload.command.arguments[2] = HIGH_BYTE(radius);
+  s->tx_packet.payload.command.arguments[3] = LOW_BYTE(radius);
 
-  int result = Radio_Transmit(&s->tx_packet, RADIO_RETURN_ON_TX);
+  int result = Radio_Transmit(&s->tx_packet, RADIO_WAIT_FOR_TX);
+#if 0
   if (result == RADIO_TX_SUCCESS)
     digitalWrite(13, HIGH);
   else
     digitalWrite(13, LOW);
 #endif
+#endif
 
-#if 0
+#if 1
   static bool b = false;
   if (b)
     digitalWrite(13, HIGH);
