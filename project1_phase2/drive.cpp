@@ -36,15 +36,6 @@ void drive(void * data)
 
   s->drive.radius = radius;
 
-#if 0
-  if (x > -10 && x < 10)
-    radius = 0x8000;
-  else if (x >= 10)
-    radius = map(x, 10,100,-2000,-1);
-  else
-    radius = map(x, -10,-100,2000,1);
-#endif
-
   // speed
 
   int16_t speed;
@@ -61,44 +52,16 @@ void drive(void * data)
 
   s->drive.speed = speed;
 
+
 #if 0
-  int16_t speed = s->speed;
-
-
-  if (y > 10)
-  {
-    // assuming 50ms task period
-    if (speed < 0)
-      speed = 0;
-    else
-      speed += 2;
-
-    if (speed > 500)
-      speed = 500;
-  }
-  else if (y < 10)
-  {
-    if (speed > 0)
-      speed = 0;
-    else
-      speed -= 2;
-
-    if (speed < -500)
-      speed = -500;
-  }
-
-  s->speed = speed;
-#endif
-
-#if 1
-  //Serial.println("drive");
-  //Serial.println(radius);
-  //Serial.print("speed: ");
-  //Serial.println(speed);
+  Serial.println("drive");
+  Serial.println(radius);
+  Serial.print("speed: ");
+  Serial.println(speed);
 #endif
 
   // send to radio
-#if 1
+
   s->tx_packet.type = COMMAND;
   s->tx_packet.payload.command.command = 137;
   s->tx_packet.payload.command.num_arg_bytes = 4;
@@ -113,15 +76,5 @@ void drive(void * data)
     digitalWrite(13, HIGH);
   else
     digitalWrite(13, LOW);
-#endif
-#endif
-
-#if 1
-  static bool b = false;
-  if (b)
-    digitalWrite(13, HIGH);
-  else
-    digitalWrite(13, LOW);
-  b = !b;
 #endif
 }

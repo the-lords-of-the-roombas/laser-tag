@@ -21,7 +21,6 @@ struct state
   struct
   {
     bool joystick_was_pressed;
-    bool transmit;
   } shoot;
 
   radiopacket_t tx_packet;

@@ -21,13 +21,14 @@ static state system_state;
 static const int task_count = 4;
 static task_t tasks[task_count];
 
+#if 1
 static const int roomba_id = COP1;
 static const uint8_t tx_channel = ROOMBA_FREQUENCIES[roomba_id];
 static uint8_t * const tx_address = ROOMBA_ADDRESSES[roomba_id];
-//static uint8_t tx_channel = 104;
-//static uint8_t tx_address[] = {0xAA,0xAA,0xAA,0xAA,0xAA};
-//static uint8_t tx_channel = test_channel;
-//static uint8_t* tx_address = test_address;
+#else
+static uint8_t tx_channel = test_channel;
+static uint8_t* tx_address = test_address;
+#endif
 
 void empty_rx_buffer(void*)
 {
@@ -47,7 +48,7 @@ void empty_rx_buffer(void*)
 
 void setup()
 {
-  Serial.begin(9600);
+  //Serial.begin(9600);
 
   pinMode(13, OUTPUT);
 
@@ -74,7 +75,6 @@ void setup()
   // store our address into the transmitted packet
   memcpy(system_state.tx_packet.payload.command.sender_address, my_addr, 5);
 
-#if 1
   joystick_init(&system_state);
   drive_init(&system_state);
   shoot_init(&system_state);
@@ -85,7 +85,6 @@ void setup()
   scheduler_task_init(tasks+3, 0e3, 50e3, &empty_rx_buffer, &system_state);
 
   scheduler_init(tasks, task_count);
-#endif
 }
 
 
