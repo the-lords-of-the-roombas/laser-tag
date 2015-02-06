@@ -22,7 +22,8 @@ void shoot(void* data)
 {
   state *s = (state*) data;
 
-  if (s->joystick.pressed && !s->shoot.joystick_was_pressed)
+  //if (s->joystick.pressed && !s->shoot.joystick_was_pressed)
+  if (s->joystick.pressed)
   {
     shoot_transmit(s);
   }
