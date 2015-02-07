@@ -14,3 +14,5 @@ build communication.svg: dot communication.gv
 build project1.html: pandoc project1.rst | style.css
   css=style.css
 
+build project1-phase2.html: pandoc project1_phase2.rst | style.css
+  css=style.css
