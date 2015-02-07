@@ -45,7 +45,7 @@ Radio
 The voltage regulator has sockets that directly match the radio's pins,
 making the two components readily pluggable together. The regulator
 forwards the radio's pins to its own pins while regulating the voltage.
-In the block diagram, the block labelled "Radio" refer to the composition
+In the block diagram, the block labelled "Radio" refers to the composition
 of these two components.
 
 The radio has the following pins:
@@ -59,17 +59,17 @@ The radio has the following pins:
 - Vcc (Power)
 - GND (Ground)
 
-The radio uses the Serial Peripheral Interface (SPI).
-In our configuraiton, Arduino acts as SPI master.
+The radio uses the Serial Peripheral Interface (SPI) for wired integration
+into the host system.
+In our configuraiton, Arduino acts as the SPI master.
 The MISO, MOSI and SCK pins involved in the SPI communication must be
-connected to Arduino's dedicated SPI pins, as shown in the diagram.
-The CSN, CE pins, are controlled by software and
+connected to the Arduino's dedicated SPI pins, as shown in the diagram.
+The CSN and CE pins are controlled by software and
 could be connected to arbitrary digital pins of Arduino.
 The IRQ pin could be connected to any Arduino
 digital pin that can produce an interrupt.
 However, the radio driver that was provided to us expected the pins to be
-connected exactly as shown in the diagram.
-
+connected as shown in the diagram.
 The Vcc pin was connected to the Arduino digital pin 11 so that the radio
 could be powered off and on by the software. This was required to properly
 initiate communication with the radio.
@@ -105,10 +105,12 @@ We used a driver for our radio obtained from
 and documented
 `here <http://nrqm.ca/nrf24l01/driver/>`_.
 
-Our program begins by powering the radio off and on by setting the Arduino
-digital pin providing power to LOW and then HIGH. This reset of radio ensures
-proper initialization in case the program is restarted without the entire
-system having been powered down. ::
+Our program begins by powering the radio off and on. This is achieved by setting
+the Arduino digital pin that provides power to the radio first to LOW and then
+HIGH. A reboot of the radio ensures proper initialization in case the program is
+restarted without the entire system having been powered down.
+
+::
 
   pinMode(11, OUTPUT);
 
@@ -117,10 +119,14 @@ system having been powered down. ::
   digitalWrite(11, HIGH);
   delay(100);
 
-Next, the radio is configured, passing it the transmission channel, our
+Next, the radio is configured with the desired transmission channel, our
 system's address, and the transmission destination address. The transmission
-channel between communicating parties must match. Each communicating party must
-have a unique address for the communication to operate without conflict. ::
+channel between communicating parties must match, and was set to the channel
+on which the Roomba system operated. Each communicating party must
+have a unique address for the communication to operate without conflict,
+hence we chose a random address for our system, most likely being unique.
+
+::
 
   // configure the communication channel
   Radio_Init(tx_channel);
@@ -138,7 +144,7 @@ channel parameter to ``Radio_Init``.
 Time-Triggered Tasks
 --------------------
 
-We used the Time-Triggered Architecture: the operation of the system is
+We used the Time-Triggered Architecture; the operation of the system is
 broken down into the folowing tasks:
 
 1. Sampling data from the joystick
@@ -152,13 +158,13 @@ The timing requirements in this phase of the project are much more relaxed
 than in the first phase: the constancy of time difference between task executions
 is never a critical aspect. The tasks only need to run often enough to provide
 satisfactory precision of control in the time-domain.
-We found the period of 50ms to be suitable for all tasks.
+We estimated the period of 50ms to be suitable for all tasks.
 
 Moreover, the
 tasks were all scheduled with no delay, because delayed onset of one task
 by the other is of little importance. Besides, our scheduler ensures that
-the order of tasks scheduled at the same time is always the same, and hence
-the communication between the tasks is deterministic.
+the order of tasks scheduled at the same time is always the same, allowing
+deterministic communication between the tasks.
 
 Communication
 .............
@@ -166,8 +172,8 @@ Communication
 Based on our experience from phase 1, there is a trade-off between beneficial
 isolation of tasks (separation of concerns, modularity), and difficulty of
 communication between the tasks. We decided to address this by having one
-single large struct grouping all system state variables, accessible to
-each task. However, to provide some logical isolation the variables
+single large struct grouping all system state variables and accessible to
+all tasks. However, to provide some logical separation, the variables
 are further grouped by sub-structs related to each task::
 
   struct state
@@ -194,17 +200,20 @@ are further grouped by sub-structs related to each task::
   };
 
 
+Due to a simplified control scheme (as described below), we ended up
+not using the state variables in the ``drive`` and ``shoot`` structs.
+
 Sampling Joystick Input
 -----------------------
 
 This task is fairly simple:
 
 1. Reads analog and digital Arduino inputs.
-2. Maps the inputs to desired values. Due to the pull-up resistor, the
+2. Maps input values to desired ranges. Due to the pull-up resistor, the
    range of analog inputs was [0,350], which was mapped to [-100,100].
    The digital input reads LOW on joystick press, which was negated to
    produce boolean "true".
-3. The mapped values are stored into the system state variables.
+3. Mapped values are stored into system state variables.
 
 Driving the Robot
 -----------------
@@ -228,7 +237,7 @@ Displacement of joystick along one axis only initiates movement at constant
 speed in a straight line forward or backward (depending on the displacement
 direction). Displacement along the other axis causes the robot to spin on the
 spot clockwise or counter-clockwise (depending on the displacement direction).
-Spinning and travelling are exclusive.
+The spinning and travelling actions are exclusive.
 
 The scheduler task related to driving the robot performes the following
 subtasks:
@@ -270,10 +279,10 @@ Wireless Communication
 We met significant issues with wireless communcation with the Roomba system.
 A large number of transmitted packets were not received by the other end
 successfully. We found that swapping the radio for another one improved
-rate of successful transmission. Nevertheless, the rate was still significantly
-below 100%, as noticable by the packet-reception indicator LEDs in the Roomba
-system, as well as preceivable jitter in control.
+the rate of successful transmission. Nevertheless, the rate was still
+significantly below 100%, as noticable by the packet-reception indicator LEDs in
+the Roomba system, as well as preceivable jitter in control.
 
-Because this issue was affected by swapping the radio, there is strong reason
+Because this issue was affected by swapping the radio, there is a strong reason
 to believe that radio malfunction was the cause. However software issues in
-the receiver system can not yet be ruled out.
+the receiver system have not yet been ruled out.
