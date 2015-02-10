@@ -37,7 +37,7 @@ The task was to assemble the following hardware components:
 - Wireless radio transmitter/receiver: nRF24L01
 - Voltage regulator (scaling 5V Arduino level to 3.3V wireless radio level)
 
-.. image:: phase2_schematic.jpg
+.. image:: phase2_schematic.png
 
 Radio
 -----
