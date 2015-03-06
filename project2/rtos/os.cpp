@@ -101,8 +101,7 @@ static void _delay_25ms(void);
  */
 static void idle (void)
 {
-    for(;;)
-    {};
+    for(;;) {};
 }
 
 
@@ -837,9 +836,8 @@ void OS_Init()
     kernel_create_task();
 
     /* First time through. Select "main" task to run first. */
-    cur_task = task_desc;
+    cur_task = dequeue(&system_queue);
     cur_task->state = RUNNING;
-    dequeue(&system_queue);
 
     /* Set up Timer 1 Output Compare interrupt,the TICK clock. */
     TIMSK1 |= _BV(OCIE1A);
