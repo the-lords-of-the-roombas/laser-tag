@@ -290,6 +290,9 @@ static void kernel_handle_request(void)
  * Save r31 and SREG on stack, disable interrupts, then save
  * the rest of the registers on the stack. In the locations this macro
  * is used, the interrupts need to be disabled, or they already are disabled.
+
+ Extended addressing:
+ We also need to (re)store the EIND register (0x3C).
  */
 #define    SAVE_CTX_TOP()       asm volatile (\
     "push   r31             \n\t"\
@@ -300,6 +303,8 @@ static void kernel_handle_request(void)
     "ori    r31, 0x80        \n\t"::);
 
 #define    SAVE_CTX_BOTTOM()       asm volatile (\
+    "push   r31             \n\t"\
+    "in     r31,0x3C        \n\t"\
     "push   r31             \n\t"\
     "push   r30             \n\t"\
     "push   r29             \n\t"\
@@ -374,7 +379,9 @@ static void kernel_handle_request(void)
     "pop    r29             \n\t"\
     "pop    r30             \n\t"\
     "pop    r31             \n\t"\
-	"out    __SREG__, r31    \n\t"\
+    "out    0x3C, r31       \n\t"\
+    "pop    r31             \n\t"\
+    "out    __SREG__, r31   \n\t"\
     "pop    r31             \n\t"::);
 
 
@@ -584,15 +591,15 @@ static int kernel_create_task()
     stack_bottom = &(p->stack[WORKSPACE-1]);
 
     /* The stack grows down in memory, so the stack pointer is going to end up
-     * pointing to the location 32 + 1 + 2 + 2 = 37 bytes above the bottom, to make
+     * pointing to the location 32 + 1 + 3 + 3 = 39 bytes above the bottom, to make
      * room for (from bottom to top):
-     *   the address of Task_Terminate() to destroy the task if it ever returns,
-     *   the address of the start of the task to "return" to the first time it runs,
-     *   register 31,
-     *   the stored SREG, and
-     *   registers 30 to 0.
+     *   - the address of Task_Terminate() to destroy the task if it ever returns,
+     *   - the address of the start of the task to "return" to the first time it runs,
+     *   - register 31,
+     *   - the stored SREG, and
+     *   - registers 30 to 0.
      */
-    uint8_t* stack_top = stack_bottom - (32 + 1 + 2 + 2);
+    uint8_t* stack_top = stack_bottom - (32 + 1 + 3 + 3);
 
     /* Not necessary to clear the task descriptor. */
     /* memset(p,0,sizeof(task_descriptor_t)); */
@@ -604,16 +611,23 @@ static int kernel_create_task()
     stack_top[32] = (uint8_t) _BV(SREG_I); /* set SREG_I bit in stored SREG. */
     /* stack_top[33] is r31. */
 
-    /* We are placing the address (16-bit) of the functions
-     * onto the stack in reverse byte order (least significant first, followed
-     * by most significant).  This is because the "return" assembly instructions
-     * (ret and reti) pop addresses off in BIG ENDIAN (most sig. first, least sig.
-     * second), even though the AT90 is LITTLE ENDIAN machine.
-     */
-    stack_top[34] = (uint8_t)((uint16_t)(kernel_request_create_args.f) >> 8);
-    stack_top[35] = (uint8_t)(uint16_t)(kernel_request_create_args.f);
-    stack_top[36] = (uint8_t)((uint16_t)Task_Terminate >> 8);
-    stack_top[37] = (uint8_t)(uint16_t)Task_Terminate;
+    /*
+    PC on ATMEGA2560 is 3 bytes (for extended addressing).
+    However, in C, function pointers are still 2 bytes.
+    The compiler solves this using "trampolines".
+    The first byte of the PC is always 0.
+
+    We push the pointers onto the stack in reverse byte order.
+    This is because the "return" assembly instructions
+    (ret and reti) pop addresses off in BIG ENDIAN (most sig. first, least sig.
+    second), even though the machine is LITTLE ENDIAN.
+    */
+    stack_top[34] = (uint8_t)(0x0);
+    stack_top[35] = (uint8_t)((uint16_t)(kernel_request_create_args.f) >> 8);
+    stack_top[36] = (uint8_t)(uint16_t)(kernel_request_create_args.f);
+    stack_top[37] = (uint8_t)(0x0);
+    stack_top[38] = (uint8_t)((uint16_t)Task_Terminate >> 8);
+    stack_top[39] = (uint8_t)(uint16_t)Task_Terminate;
 
     /*
      * Make stack pointer point to cell above stack (the top).
