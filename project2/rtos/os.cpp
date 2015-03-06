@@ -871,31 +871,24 @@ void OS_Abort(void)
 
     Disable_Interrupt();
 
-    /* Initialize port for output */
-    DDRD = LED_RED_MASK | LED_GREEN_MASK;
+    // Use built-in LED on digital pin 13 (PB7)
 
-    if(error_msg < ERR_RUN_1_USER_CALLED_OS_ABORT)
-    {
-        flashes = error_msg + 1;
-        mask = LED_GREEN_MASK;
-    }
-    else
-    {
-        flashes = error_msg + 1 - ERR_RUN_1_USER_CALLED_OS_ABORT;
-        mask = LED_RED_MASK;
-    }
+    // Set pin mode
+    DDRB = (1 << DDB7);
 
+    flashes = error_msg + 1;
+    mask = (1 << PORTB7);
 
     for(;;)
     {
-        PORTD = (uint8_t)(LED_RED_MASK | LED_GREEN_MASK);
+        PORTB = mask;
 
         for(i = 0; i < 100; ++i)
         {
                _delay_25ms();
         }
 
-        PORTD = (uint8_t) 0;
+        PORTB = (uint8_t) 0;
 
         for(i = 0; i < 40; ++i)
         {
@@ -905,14 +898,14 @@ void OS_Abort(void)
 
         for(j = 0; j < flashes; ++j)
         {
-            PORTD = mask;
+            PORTB = mask;
 
             for(i = 0; i < 10; ++i)
             {
                 _delay_25ms();
             }
 
-            PORTD = (uint8_t) 0;
+            PORTB = (uint8_t) 0;
 
             for(i = 0; i < 10; ++i)
             {
