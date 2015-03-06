@@ -597,9 +597,7 @@ Scheduler
 We implemented our own task scheduler, according to the
 Time-Triggered Architecture paradigm. The scheduler represents time
 in microseconds using a 32 bit unsigned integer variable which will
-overflow in about 70 minutes. It is possible to implement the scheduler
-so that it will handle most tasks as expected even in the case of overflow,
-as will be explained later.
+overflow in about 70 minutes.
 
 A task is represented with the following struct::
 
@@ -649,7 +647,11 @@ The ``scheduler_run`` function again obtains the current time from the system
 and compares it to each task's next execution time. If the current time is
 larger than the time of any task, the callback function of the task is
 executed. This comparison will fail when the task's scheduled time has
-overflown but the current time hasn't yet::
+overflown but the current time hasn't yet. However, the overflow will only
+occur after about 70 minutes, which is sufficient for our educational
+application.
+
+::
 
     microseconds_t scheduler_run()
     {
