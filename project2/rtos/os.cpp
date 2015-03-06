@@ -590,26 +590,33 @@ static int kernel_create_task()
 
     stack_bottom = &(p->stack[WORKSPACE-1]);
 
-    /* The stack grows down in memory, so the stack pointer is going to end up
-     * pointing to the location 32 + 1 + 3 + 3 = 39 bytes above the bottom, to make
-     * room for (from bottom to top):
-     *   - the address of Task_Terminate() to destroy the task if it ever returns,
-     *   - the address of the start of the task to "return" to the first time it runs,
-     *   - register 31,
-     *   - the stored SREG, and
-     *   - registers 30 to 0.
-     */
-    uint8_t* stack_top = stack_bottom - (32 + 1 + 3 + 3);
+
+    /*
+      The stack grows down in memory, so the stack pointer is going to end up
+      pointing to the location 32 + 1 + 1 + 3 + 3 = 40 bytes above the bottom,
+      to make room for (from bottom to top):
+      - the address of Task_Terminate() to destroy the task if it ever returns,
+      - the address of the start of the task to "return" to the first time it runs,
+      - register 31,
+      - SREG
+      - EIND
+      - registers 30 to 0.
+    */
+    uint8_t* stack_top = stack_bottom - (32 + 1 + 1 + 3 + 3);
 
     /* Not necessary to clear the task descriptor. */
     /* memset(p,0,sizeof(task_descriptor_t)); */
 
-    /* stack_top[0] is the byte above the stack.
-     * stack_top[1] is r0. */
-    stack_top[2] = (uint8_t) 0; /* r1 is the "zero" register. */
-    /* stack_top[31] is r30. */
-    stack_top[32] = (uint8_t) _BV(SREG_I); /* set SREG_I bit in stored SREG. */
-    /* stack_top[33] is r31. */
+    // 0 = above top of stack
+    // 1 = r0
+    // 2 = r1
+    stack_top[2] = (uint8_t) 0; // r1 is the "zero" register
+    // ...
+    // 31 = r30
+    // 32 = EIND
+    // 33 = SREG
+    stack_top[33] = (uint8_t) _BV(SREG_I); /* set SREG_I bit in stored SREG. */
+    // 34 = r31
 
     /*
     PC on ATMEGA2560 is 3 bytes (for extended addressing).
@@ -622,12 +629,12 @@ static int kernel_create_task()
     (ret and reti) pop addresses off in BIG ENDIAN (most sig. first, least sig.
     second), even though the machine is LITTLE ENDIAN.
     */
-    stack_top[34] = (uint8_t)(0x0);
-    stack_top[35] = (uint8_t)((uint16_t)(kernel_request_create_args.f) >> 8);
-    stack_top[36] = (uint8_t)(uint16_t)(kernel_request_create_args.f);
-    stack_top[37] = (uint8_t)(0x0);
-    stack_top[38] = (uint8_t)((uint16_t)Task_Terminate >> 8);
-    stack_top[39] = (uint8_t)(uint16_t)Task_Terminate;
+    stack_top[35] = (uint8_t)(0x0);
+    stack_top[36] = (uint8_t)((uint16_t)(kernel_request_create_args.f) >> 8);
+    stack_top[37] = (uint8_t)(uint16_t)(kernel_request_create_args.f);
+    stack_top[38] = (uint8_t)(0x0);
+    stack_top[39] = (uint8_t)((uint16_t)Task_Terminate >> 8);
+    stack_top[40] = (uint8_t)(uint16_t)Task_Terminate;
 
     /*
      * Make stack pointer point to cell above stack (the top).
