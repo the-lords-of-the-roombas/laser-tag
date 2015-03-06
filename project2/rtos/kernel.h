@@ -69,7 +69,6 @@ typedef enum
 }
 kernel_request_t;
 
-
 /**
  * @brief The arguments required to create a task.
  */
@@ -83,6 +82,11 @@ typedef struct
     uint8_t level;
     /** If the new task is PERIODIC, this is its name in the PPP array. */
     uint8_t name;
+
+    // FIXME: make more lean (sometimes redundant data)
+
+    /** Periodic task parameters */
+    uint16_t period, wcet, start;
 }
 create_args_t;
 
@@ -105,6 +109,10 @@ struct td_struct
     int                             arg;
     /** The priority (type) of this task. */
     uint8_t                         level;
+    /* Periodic task parameters */
+    uint16_t period, wcet, start;
+    uint16_t next_tick;
+
     /** A link to the next task descriptor in the queue holding this task. */
     task_descriptor_t*              next;
 };
