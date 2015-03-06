@@ -745,7 +745,7 @@ static void kernel_update_ticker(void)
         task_descriptor_t *t = periodic_task_list.head;
         while(t)
         {
-            if (t->next_tick <= current_tick)
+            if (t->next_tick - current_tick > t->period)
                 break;
             t = t->next;
         }
