@@ -23,8 +23,8 @@ extern "C" {
 #define Disable_Interrupt()     asm volatile ("cli"::)
 #define Enable_Interrupt()     asm volatile ("sei"::)
 
-/** The maximum number of names. Currently the same as the number of tasks. */
-#define 	MAXNAME		MAXPROCESS
+/* Task stack size */
+#define WORKSPACE 256
 
 /** The RTOS timer's prescaler divisor */
 #define TIMER_PRESCALER 8
