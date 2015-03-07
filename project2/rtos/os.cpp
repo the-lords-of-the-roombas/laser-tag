@@ -216,42 +216,24 @@ static void kernel_handle_request(void)
         break;
 
     case TIMER_EXPIRED:
-        kernel_update_ticker();
+       // Pre-empt round robin tasks at each tick
+       if (cur_task->level == RR)
+           kernel_enqueue_task(cur_task);
 
-        /* Round robin tasks get pre-empted on every tick. */
-        if(cur_task->level == RR && cur_task->state == RUNNING)
-        {
-            cur_task->state = READY;
-            enqueue(&rr_queue, cur_task);
-        }
-        break;
+       kernel_update_ticker();
+
+       break;
 
     case TASK_CREATE:
         kernel_request_retval = kernel_create_task();
 
-        /* Check if new task has higer priority, and that it wasn't an ISR
-         * making the request.
-         */
-        if(kernel_request_retval)
+        // Pre-empt current task if lower priority than new task
+        if ( kernel_request_retval &&
+             kernel_request_create_args.level > cur_task->level )
         {
-            /* If new task is SYSTEM and cur is not, then don't run old one */
-            if(kernel_request_create_args.level == SYSTEM && cur_task->level != SYSTEM)
-            {
-                cur_task->state = READY;
-            }
-
-            // FIXME:
-            // In case we allow creating periodic tasks in running state,
-            // and we have just created a periodic task,
-            // and it is ready to run,
-            // we need to pre-empt any RR task (set task.state == READY)
-
-            /* enqueue READY RR tasks. */
-            if(cur_task->level == RR && cur_task->state == READY)
-            {
-                enqueue(&rr_queue, cur_task);
-            }
+            kernel_enqueue_task(cur_task);
         }
+
         break;
 
     case TASK_TERMINATE:
@@ -262,26 +244,12 @@ static void kernel_handle_request(void)
         break;
 
     case TASK_NEXT:
-		switch(cur_task->level)
-		{
-	    case SYSTEM:
-	        enqueue(&system_queue, cur_task);
-			break;
+       kernel_enqueue_task(cur_task);
 
-	    case PERIODIC:
-            current_periodic_task = NULL;
-	        break;
+       if (cur_task->level == PERIODIC)
+           current_periodic_task = NULL;
 
-	    case RR:
-	        enqueue(&rr_queue, cur_task);
-	        break;
-
-	    default: /* idle_task */
-			break;
-		}
-
-		cur_task->state = READY;
-        break;
+       break;
 
     case TASK_GET_ARG:
         /* Should not happen. Handled in task itself. */
