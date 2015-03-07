@@ -288,6 +288,8 @@ int8_t   Task_Create_RR(    void (*f)(void), int16_t arg);
    */
 int8_t   Task_Create_Periodic(void(*f)(void), int16_t arg, uint16_t period, uint16_t wcet, uint16_t start);
 
+void   Task_Periodic_Start();
+
 /** 
  * Terminate the calling process
  *

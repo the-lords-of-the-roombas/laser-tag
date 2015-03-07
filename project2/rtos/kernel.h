@@ -59,6 +59,7 @@ typedef enum
     TASK_TERMINATE,
     TASK_NEXT,
     TASK_GET_ARG,
+    TASK_PERIODIC_START,
 }
 kernel_request_t;
 

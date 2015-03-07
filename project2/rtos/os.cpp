@@ -9,6 +9,9 @@
  * @author Justin Tanner
  */
 
+#define __STDC_LIMIT_MACROS
+#include <stdint.h>
+
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
@@ -65,8 +68,16 @@ static queue_t system_queue;
 static queue_t periodic_task_list;
 task_descriptor_t *current_periodic_task = NULL;
 
-static volatile uint16_t current_tick = 0;
-static volatile uint16_t current_periodic_task_onset_tick = 0;
+static uint16_t current_tick = 0;
+
+static bool periodic_tasks_running = false;
+static uint16_t ticks_since_current_periodic_task = 0;
+static uint16_t ticks_to_next_periodic_task = 0;
+
+
+// Maybe set current_periodic_task.
+// Update ticks_to_next_periodic_task.
+static void kernel_select_periodic_task();
 
 /** Error message used in OS_Abort() */
 static uint8_t volatile error_msg = ERR_RUN_1_USER_CALLED_OS_ABORT;
@@ -92,6 +103,7 @@ static task_descriptor_t* dequeue(queue_t* queue_ptr);
 static void kernel_update_ticker(void);
 static void idle (void);
 static void _delay_25ms(void);
+static void kernel_assert(bool flag);
 
 /*
  * FUNCTIONS
@@ -250,6 +262,7 @@ static void kernel_handle_request(void)
 			break;
 
 	    case PERIODIC:
+            current_periodic_task = NULL;
 	        break;
 
 	    case RR:
@@ -266,7 +279,27 @@ static void kernel_handle_request(void)
     case TASK_GET_ARG:
         /* Should not happen. Handled in task itself. */
         break;
-		
+
+   case TASK_PERIODIC_START:
+       if (!periodic_tasks_running)
+       {
+           kernel_select_periodic_task();
+           periodic_tasks_running = true;
+
+           /* Enable timer interrupt */
+           TIMSK1 |= _BV(OCIE1A);
+           /* Set timer to timeout after a tick */
+           OCR1A = TCNT1 + TICK_CYCLES;
+           /* Clear timeout flag */
+           TIFR1 = _BV(OCF1A);
+       }
+       else
+       {
+           error_msg = ERR_RUN_6_INVALID_REQUEST;
+           OS_Abort();
+       }
+       break;
+
     default:
         /* Should never happen */
         error_msg = ERR_RUN_5_RTOS_INTERNAL_ERROR;
@@ -551,7 +584,6 @@ void TIMER1_COMPA_vect(void)
     asm volatile ("ret\n"::);
 }
 
-
 /*
  * Tasks Functions
  */
@@ -574,6 +606,16 @@ static int kernel_create_task()
     {
         /* Too many tasks! */
         return 0;
+    }
+
+    if(kernel_request_create_args.level == PERIODIC)
+    {
+        // Abort if periodic tasks running:
+        if (periodic_tasks_running)
+        {
+            error_msg = ERR_RUN_6_INVALID_REQUEST;
+            OS_Abort();
+        }
     }
 
 	/* idling "task" goes in last descriptor. */
@@ -737,6 +779,44 @@ static task_descriptor_t* dequeue(queue_t* queue_ptr)
 }
 
 
+// Maybe set current_periodic_task.
+// Update ticks_to_next_periodic_task.
+static void kernel_select_periodic_task()
+{
+    kernel_assert(!current_periodic_task);
+
+    uint16_t next_task_distance = UINT16_MAX;
+
+    task_descriptor_t *selected_task = NULL;
+    task_descriptor_t *t = periodic_task_list.head;
+    while(t)
+    {
+        if (!selected_task && t->next_tick == current_tick)
+        {
+            selected_task = t;
+            t->next_tick += t->period;
+            ticks_since_current_periodic_task = 0;
+        }
+
+        uint16_t distance = t->next_tick - current_tick;
+        if (distance < next_task_distance)
+            next_task_distance = distance;
+
+        t = t->next;
+    }
+
+    if (selected_task && selected_task->wcet > next_task_distance)
+    {
+        // Task overlap. Abort.
+        error_msg = ERR_RUN_3_PERIODIC_TOOK_TOO_LONG;
+        OS_Abort();
+    }
+
+    current_periodic_task = selected_task;
+    ticks_to_next_periodic_task = next_task_distance;
+}
+
+
 /**
  * @brief Update the current time.
  *
@@ -744,38 +824,30 @@ static task_descriptor_t* dequeue(queue_t* queue_ptr)
  */
 static void kernel_update_ticker(void)
 {
-    /* PORTD ^= LED_D5_RED; */
+    if (ticks_to_next_periodic_task)
+    {
+        --ticks_to_next_periodic_task;
+    }
 
     ++current_tick;
 
     if (current_periodic_task)
     {
-        uint16_t ticks_since_start =
-                current_tick - current_periodic_task_onset_tick;
-
-        if (ticks_since_start > current_periodic_task->wcet)
+        ++ticks_since_current_periodic_task;
+        if (ticks_since_current_periodic_task >=
+                current_periodic_task->wcet)
         {
-            /* error handling */
             error_msg = ERR_RUN_3_PERIODIC_TOOK_TOO_LONG;
             OS_Abort();
         }
     }
-    else
-    {
-        task_descriptor_t *t = periodic_task_list.head;
-        while(t)
-        {
-            if (t->next_tick - current_tick > t->period)
-                break;
-            t = t->next;
-        }
 
-        if (t)
-        {
-            current_periodic_task = t;
-            t->next_tick += t->period;
-        }
+    if (!ticks_to_next_periodic_task)
+    {
+        kernel_select_periodic_task();
     }
+
+    return;
 }
 
 #undef SLOW_CLOCK
@@ -839,11 +911,8 @@ void OS_Init()
     cur_task = dequeue(&system_queue);
     cur_task->state = RUNNING;
 
-    /* Set up Timer 1 Output Compare interrupt,the TICK clock. */
-    TIMSK1 |= _BV(OCIE1A);
-    OCR1A = TCNT1 + TICK_CYCLES;
-    /* Clear flag. */
-    TIFR1 = _BV(OCF1A);
+    // Set up status LED:
+    DDRB = (1 << DDB7);
 
     /*
      * The main loop of the RTOS kernel.
@@ -866,6 +935,14 @@ static void _delay_25ms(void)
     _delay_ms(25);
 }
 
+static void kernel_assert(bool flag)
+{
+    if (!flag)
+    {
+        error_msg = ERR_RUN_5_RTOS_INTERNAL_ERROR;
+        OS_Abort();
+    }
+}
 
 /** @brief Abort the execution of this RTOS due to an unrecoverable erorr.
  */
@@ -878,7 +955,6 @@ void OS_Abort(void)
 
     // Use built-in LED on digital pin 13 (PB7)
 
-    // Set pin mode
     DDRB = (1 << DDB7);
 
     flashes = error_msg + 1;
@@ -965,9 +1041,21 @@ int8_t   Task_Create_RR(    void (*f)(void), int16_t arg)
 int8_t   Task_Create_Periodic(void(*f)(void), int16_t arg,
                               uint16_t period, uint16_t wcet, uint16_t start)
 {
-    return Task_Create(SYSTEM, f, arg, period, wcet, start);
+    return Task_Create(PERIODIC, f, arg, period, wcet, start);
 }
 
+void   Task_Periodic_Start()
+{
+    uint8_t volatile sreg;
+
+    sreg = SREG;
+    Disable_Interrupt();
+
+    kernel_request = TASK_PERIODIC_START;
+    enter_kernel();
+
+    SREG = sreg;
+}
 
 /**
   * @brief The calling task gives up its share of the processor voluntarily.
