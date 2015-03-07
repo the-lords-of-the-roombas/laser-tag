@@ -4,6 +4,13 @@
 
 extern int r_main();
 
+void delay_30_ms()
+{
+    PORTB = (1 << PORTB7);
+    _delay_ms(30);
+    PORTB = 0;
+}
+
 void toggle_led()
 {
     //DDRB = (1 << DDB7);
@@ -12,7 +19,7 @@ void toggle_led()
 
     for(;;)
     {
-#if 1
+#if 0
         if (on)
             PORTB = (1 << PORTB7);
         else
@@ -20,6 +27,8 @@ void toggle_led()
 
         on = !on;
 #endif
+        Task_Create_System(delay_30_ms, 0);
+
         Task_Next();
     }
 }
@@ -53,15 +62,15 @@ void blink_led()
 
 int r_main()
 {
-    //Task_Create_Periodic(toggle_led, 0, 100, 1, 0);
-    //Task_Create_Periodic(dummy, 0, 100, 5, 401);
-    //Task_Periodic_Start();
+    Task_Create_Periodic(toggle_led, 0, 100, 1, 0);
+    Task_Create_Periodic(dummy, 0, 100, 5, 101);
+    Task_Periodic_Start();
 
-
+#if 0
     uint16_t then = Now();
     bool led_on = false;
     uint16_t timeout = 0;
-#if 1
+
     for(;;)
     {
         uint16_t now = Now();
