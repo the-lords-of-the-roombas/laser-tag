@@ -209,20 +209,20 @@ static void kernel_dispatch(void)
  */
 static void kernel_handle_request(void)
 {
-   switch(kernel_request)
+    switch(kernel_request)
     {
     case NONE:
         /* Should not happen. */
         break;
 
     case TIMER_EXPIRED:
-       // Pre-empt round robin tasks at each tick
-       if (cur_task->level == RR)
-           kernel_enqueue_task(cur_task);
+        // Pre-empt round robin tasks at each tick
+        if (cur_task->level == RR)
+            kernel_enqueue_task(cur_task);
 
-       kernel_update_ticker();
+        kernel_update_ticker();
 
-       break;
+        break;
 
     case TASK_CREATE:
         kernel_request_retval = kernel_create_task();
@@ -237,54 +237,55 @@ static void kernel_handle_request(void)
         break;
 
     case TASK_TERMINATE:
-		if(cur_task != idle_task)
-		{
-        	kernel_terminate_task();
-		}
+        if(cur_task != idle_task)
+        {
+            kernel_terminate_task();
+        }
         break;
 
     case TASK_NEXT:
-       kernel_enqueue_task(cur_task);
+        kernel_enqueue_task(cur_task);
 
-       if (cur_task->level == PERIODIC)
-           current_periodic_task = NULL;
+        if (cur_task->level == PERIODIC)
+            current_periodic_task = NULL;
 
-       break;
+        break;
 
     case TASK_GET_ARG:
         /* Should not happen. Handled in task itself. */
         break;
 
-   case TASK_PERIODIC_START:
-       if (!periodic_tasks_running)
-       {
-           kernel_select_periodic_task();
-           periodic_tasks_running = true;
+    case TASK_PERIODIC_START:
 
-           /* Enable timer interrupt */
-           TIMSK1 |= _BV(OCIE1A);
-           /* Set timer to timeout after a tick */
-           OCR1A = TCNT1 + TICK_CYCLES;
-           /* Clear timeout flag */
-           TIFR1 = _BV(OCF1A);
-       }
-       else
-       {
-           error_msg = ERR_RUN_6_INVALID_REQUEST;
-           OS_Abort();
-       }
-       break;
+        if (!periodic_tasks_running)
+        {
+            kernel_select_periodic_task();
+            periodic_tasks_running = true;
 
-   case SERVICE_SUBSCRIBE:
-   {
-       kernel_service_subscribe();
-       break;
-   }
-   case SERVICE_PUBLISH:
-   {
-       kernel_service_publish();
-       break;
-   }
+            /* Enable timer interrupt */
+            TIMSK1 |= _BV(OCIE1A);
+            /* Set timer to timeout after a tick */
+            OCR1A = TCNT1 + TICK_CYCLES;
+            /* Clear timeout flag */
+            TIFR1 = _BV(OCF1A);
+        }
+        else
+        {
+            error_msg = ERR_RUN_6_INVALID_REQUEST;
+            OS_Abort();
+        }
+        break;
+
+    case SERVICE_SUBSCRIBE:
+    {
+        kernel_service_subscribe();
+        break;
+    }
+    case SERVICE_PUBLISH:
+    {
+        kernel_service_publish();
+        break;
+    }
     default:
         /* Should never happen */
         error_msg = ERR_RUN_5_RTOS_INTERNAL_ERROR;
