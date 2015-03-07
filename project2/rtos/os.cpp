@@ -231,15 +231,10 @@ static void kernel_handle_request(void)
             }
 
             // FIXME:
-#if 0
-            /* If cur is RR, it might be pre-empted by a new PERIODIC. */
-            if(cur_task->level == RR &&
-               kernel_request_create_args.level == PERIODIC &&
-               PPP[slot_name_index] == kernel_request_create_args.name)
-            {
-                cur_task->state = READY;
-            }
-#endif
+            // In case we allow creating periodic tasks in running state,
+            // and we have just created a periodic task,
+            // and it is ready to run,
+            // we need to pre-empt any RR task (set task.state == READY)
 
             /* enqueue READY RR tasks. */
             if(cur_task->level == RR && cur_task->state == READY)
