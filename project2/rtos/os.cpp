@@ -101,6 +101,7 @@ static void kernel_terminate_task(void);
 
 static void enqueue(queue_t* queue_ptr, task_descriptor_t* task_to_add);
 static task_descriptor_t* dequeue(queue_t* queue_ptr);
+static void queue_erase(queue_t*, task_descriptor_t*);
 
 static void kernel_update_ticker(void);
 static void idle (void);
@@ -731,6 +732,16 @@ static void kernel_terminate_task(void)
     /* deallocate all resources used by this task */
     cur_task->state = DEAD;
 
+    // FIXME:
+    // For consistency, it might be better if
+    // each periodic task gets temporarily removed
+    // from the periodic task list while running.
+    if (cur_task->level == PERIODIC)
+    {
+        queue_erase(&periodic_task_list, cur_task);
+        current_periodic_task = NULL;
+    }
+
     enqueue(&dead_pool_queue, cur_task);
 }
 
@@ -782,6 +793,31 @@ static task_descriptor_t* dequeue(queue_t* queue_ptr)
     return task_ptr;
 }
 
+static void queue_erase(queue_t * q, task_descriptor_t * t)
+{
+    if (!q->head)
+        return;
+
+    if (t == q->head)
+    {
+        q->head = q->head->next;
+        t->next = NULL;
+    }
+    else
+    {
+        task_descriptor_t * prev = q->head;
+        while(prev)
+        {
+            if (prev->next == t)
+            {
+                prev->next = t->next;
+                t->next = NULL;
+                return;
+            }
+            prev = prev->next;
+        }
+    }
+}
 
 // Maybe set current_periodic_task.
 // Update ticks_to_next_periodic_task.
