@@ -29,8 +29,10 @@ extern "C" {
 /** The RTOS timer's prescaler divisor */
 #define TIMER_PRESCALER 8
 
+#define CYCLES_PER_MS ((F_CPU / TIMER_PRESCALER) / 1000)
+
 /** The number of clock cycles in one "tick" or 5 ms */
-#define TICK_CYCLES     (((F_CPU / TIMER_PRESCALER) / 1000) * TICK)
+#define TICK_CYCLES (CYCLES_PER_MS * TICK)
 
 #define MAX_SERVICE_COUNT 30
 

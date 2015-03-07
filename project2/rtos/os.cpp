@@ -72,14 +72,11 @@ static queue_t system_queue;
 static queue_t periodic_task_list;
 task_descriptor_t *current_periodic_task = NULL;
 
-static uint16_t current_tick = 0;
+static uint16_t volatile ticks_since_system_start = 0;
 
 static bool periodic_tasks_running = false;
+static uint16_t ticks_at_next_periodic_schedule_check = 0;
 static uint16_t ticks_since_current_periodic_task = 0;
-static uint16_t ticks_to_next_periodic_task = 0;
-
-// Milliseconds counter:
-static volatile uint16_t elapsed_milliseconds = 0;
 
 // Maybe set current_periodic_task.
 // Update ticks_to_next_periodic_task.
@@ -259,15 +256,16 @@ static void kernel_handle_request(void)
 
         if (!periodic_tasks_running)
         {
-            kernel_select_periodic_task();
             periodic_tasks_running = true;
 
-            /* Enable timer interrupt */
-            TIMSK1 |= _BV(OCIE1A);
-            /* Set timer to timeout after a tick */
-            OCR1A = TCNT1 + TICK_CYCLES;
-            /* Clear timeout flag */
-            TIFR1 = _BV(OCF1A);
+            task_descriptor_t *task = periodic_task_list.head;
+            while(task)
+            {
+                task->next_tick = ticks_since_system_start  + 1 + task->start;
+                task = task->next;
+            }
+
+            ticks_at_next_periodic_schedule_check = ticks_since_system_start + 1;
         }
         else
         {
@@ -570,13 +568,6 @@ void TIMER1_COMPA_vect(void)
     asm volatile ("ret\n"::);
 }
 
-ISR(TIMER3_COMPA_vect)
-{
-    ++elapsed_milliseconds;
-
-    OCR3A += 250;
-}
-
 /*
  * Tasks Functions
  */
@@ -854,8 +845,9 @@ static void queue_erase(queue_t * q, task_descriptor_t * t)
     }
 }
 
+// Update ticks_at_next_periodic_schedule_check.
 // Maybe set current_periodic_task.
-// Update ticks_to_next_periodic_task.
+
 static void kernel_select_periodic_task()
 {
     kernel_assert(!current_periodic_task);
@@ -866,14 +858,14 @@ static void kernel_select_periodic_task()
     task_descriptor_t *t = periodic_task_list.head;
     while(t)
     {
-        if (!selected_task && t->next_tick == current_tick)
+        if (!selected_task && t->next_tick == ticks_since_system_start)
         {
             selected_task = t;
             t->next_tick += t->period;
             ticks_since_current_periodic_task = 0;
         }
 
-        uint16_t distance = t->next_tick - current_tick;
+        uint16_t distance = t->next_tick - ticks_since_system_start;
         if (distance < next_task_distance)
             next_task_distance = distance;
 
@@ -888,7 +880,8 @@ static void kernel_select_periodic_task()
     }
 
     current_periodic_task = selected_task;
-    ticks_to_next_periodic_task = next_task_distance;
+    ticks_at_next_periodic_schedule_check =
+            ticks_since_system_start + next_task_distance;
 }
 
 
@@ -899,12 +892,7 @@ static void kernel_select_periodic_task()
  */
 static void kernel_update_ticker(void)
 {
-    if (ticks_to_next_periodic_task)
-    {
-        --ticks_to_next_periodic_task;
-    }
-
-    ++current_tick;
+    ++ticks_since_system_start;
 
     // Note: We only count ticks_since_current_periodic_task
     // when the task is running. Effectly, we extend its allowed
@@ -926,29 +914,13 @@ static void kernel_update_ticker(void)
         }
     }
 
-    if (!ticks_to_next_periodic_task)
+    if (ticks_since_system_start == ticks_at_next_periodic_schedule_check)
     {
         kernel_select_periodic_task();
     }
 
     return;
 }
-
-#undef SLOW_CLOCK
-
-#ifdef SLOW_CLOCK
-/**
- * @brief For DEBUGGING to make the clock run slower
- *
- * Divide CLKI/O by 64 on timer 1 to run at 125 kHz  CS3[210] = 011
- * 1 MHz CS3[210] = 010
- */
-static void kernel_slow_clock(void)
-{
-    TCCR1B &= ~(_BV(CS12) | _BV(CS10));
-    TCCR1B |= (_BV(CS11));
-}
-#endif
 
 /**
  * @brief Setup the RTOS and create main() as the first SYSTEM level task.
@@ -958,27 +930,6 @@ static void kernel_slow_clock(void)
 void OS_Init()
 {
     int i;
-
-    /* Set up the clocks */
-
-    // Timer 1 used for ticks (periodic tasks)
-    TCCR1B |= (_BV(CS11));
-
-    // Timer 2 used to count ms
-    // Set 1/64 prescaler; 1ms = 250 cycles
-    TCCR3B = (_BV(CS31) | _BV(CS30));
-    // Enable interrupt
-    TIMSK3 = _BV(OCIE3A);
-    // Set compare to now + 250 cycles
-    OCR3A = TCNT3 + 250;
-    // Clear compare flag
-    TIFR3 = _BV(OCF3A);
-
-    elapsed_milliseconds = 0;
-
-#ifdef SLOW_CLOCK
-    kernel_slow_clock();
-#endif
 
     /*
      * Initialize dead pool to contain all but last task descriptor.
@@ -1018,6 +969,16 @@ void OS_Init()
 
     // Set up status LED:
     DDRB = (1 << DDB7);
+
+    // Set up Timer 1 to count ticks...
+    // Use 1/8 prescaler
+    TCCR1B |= (_BV(CS11));
+    // Time out after 1 tick
+    OCR1A = TCNT1 + TICK_CYCLES;
+    // Clear timeout flag
+    TIFR1 = _BV(OCF1A);
+    // Enable interrupt
+    TIMSK1 |= _BV(OCIE1A);
 
     /*
      * The main loop of the RTOS kernel.
@@ -1261,16 +1222,20 @@ void Service_Publish( SERVICE *s, int16_t v )
 
 uint16_t Now()
 {
-    uint16_t now;
+    uint16_t ms_now;
 
     uint8_t sreg = SREG;
     Disable_Interrupt();
 
-    now = elapsed_milliseconds;
+    uint16_t last_tick = ticks_since_system_start;
+    uint16_t cycles_at_last_tick = OCR1A - TICK_CYCLES;
+    uint16_t cycles_extra = TCNT1 - cycles_at_last_tick;
+    uint16_t ms_extra = cycles_extra / CYCLES_PER_MS;
+    ms_now = last_tick * TICK + ms_extra;
 
     SREG = sreg;
 
-    return now;
+    return ms_now;
 }
 
 /**
