@@ -7,12 +7,9 @@ function(add_rtos_test name)
   add_custom_target(${name}-hex ALL DEPENDS ${hex_file})
 endfunction()
 
-add_executable(test test.cpp)
-target_link_libraries(test rtos)
+add_rtos_test(test-time test_time.cpp)
 
-avr_hex(test hex_file test)
-add_custom_target(test-hex ALL DEPENDS ${hex_file})
-
+add_rtos_test(test-periodic-schedule test_periodic_schedule.cpp)
 
 add_rtos_test(test-publish-system test_publish_system.cpp)
 
