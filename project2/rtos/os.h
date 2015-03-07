@@ -288,6 +288,12 @@ int8_t   Task_Create_RR(    void (*f)(void), int16_t arg);
    */
 int8_t   Task_Create_Periodic(void(*f)(void), int16_t arg, uint16_t period, uint16_t wcet, uint16_t start);
 
+// Task_Periodic_Start:
+// Start periodic schedule at next tick.
+// Each periodic task created so far will first run
+// at next tick + its start time.
+// It is an error to create periodic tasks after calling this (the OS aborts).
+
 void   Task_Periodic_Start();
 
 /** 

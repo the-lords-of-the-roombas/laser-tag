@@ -914,7 +914,8 @@ static void kernel_update_ticker(void)
         }
     }
 
-    if (ticks_since_system_start == ticks_at_next_periodic_schedule_check)
+    if ( periodic_tasks_running &&
+         ticks_since_system_start == ticks_at_next_periodic_schedule_check )
     {
         kernel_select_periodic_task();
     }
