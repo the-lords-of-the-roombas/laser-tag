@@ -1,6 +1,6 @@
 #include <avr/io.h>
 #include <util/delay.h>
-#include "rtos/os.h"
+#include "../os.h"
 
 extern int r_main();
 
