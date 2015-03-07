@@ -670,7 +670,6 @@ static int kernel_create_task()
     p->state = READY;
     p->arg = kernel_request_create_args.arg;
     p->level = kernel_request_create_args.level;
-    p->name = kernel_request_create_args.name;
     p->period = kernel_request_create_args.period;
     p->wcet = kernel_request_create_args.wcet;
     p->start = kernel_request_create_args.start;
@@ -1080,8 +1079,6 @@ int8_t Task_Create(uint8_t level, void (*f)(void), int16_t arg,
     kernel_request_create_args.f = (voidfuncvoid_ptr)f;
     kernel_request_create_args.arg = arg;
     kernel_request_create_args.level = level;
-    // FIXME: Task "name"??
-    kernel_request_create_args.name = 0;
     kernel_request_create_args.period = period;
     kernel_request_create_args.wcet = wcet;
     kernel_request_create_args.start = start;
