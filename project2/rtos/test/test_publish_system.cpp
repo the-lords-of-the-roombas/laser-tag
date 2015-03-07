@@ -42,9 +42,11 @@ int r_main()
 {
     service = Service_Init();
 
-    Task_Create_System(publisher, 0);
-
-    receive(service);
+    for(;;)
+    {
+        Task_Create_System(publisher, 0);
+        receive(service);
+    }
 
     return 0;
 }
