@@ -32,6 +32,8 @@ extern "C" {
 /** The number of clock cycles in one "tick" or 5 ms */
 #define TICK_CYCLES     (((F_CPU / TIMER_PRESCALER) / 1000) * TICK)
 
+#define MAX_SERVICE_COUNT 30
+
 /* Typedefs and data structures. */
 
 typedef void (*voidfuncvoid_ptr) (void);      /* pointer to void f(void) */
@@ -60,6 +62,8 @@ typedef enum
     TASK_NEXT,
     TASK_GET_ARG,
     TASK_PERIODIC_START,
+    SERVICE_SUBSCRIBE,
+    SERVICE_PUBLISH
 }
 kernel_request_t;
 
@@ -123,6 +127,12 @@ typedef struct
     task_descriptor_t*  tail;
 }
 queue_t;
+
+struct service
+{
+    queue_t subscribers;
+    volatile int16_t value;
+};
 
 #ifdef __cplusplus
 }

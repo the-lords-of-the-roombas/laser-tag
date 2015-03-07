@@ -47,6 +47,10 @@ static task_descriptor_t task_desc[MAXPROCESS + 1];
 /** The special "idle task" at the end of the descriptors array. */
 static task_descriptor_t* idle_task = &task_desc[MAXPROCESS];
 
+static volatile uint16_t service_count = 0;
+static struct service services[MAX_SERVICE_COUNT];
+static struct service * volatile requested_service = NULL;
+
 /** The current kernel request. */
 static volatile kernel_request_t kernel_request;
 
@@ -97,6 +101,11 @@ extern "C" void TIMER1_COMPA_vect(void) __attribute__ ((signal, naked));
 
 static int kernel_create_task();
 static void kernel_terminate_task(void);
+static void kernel_enqueue_task(task_descriptor_t*);
+
+static void kernel_service_subscribe();
+static void kernel_service_publish();
+
 /* queues */
 
 static void enqueue(queue_t* queue_ptr, task_descriptor_t* task_to_add);
@@ -298,6 +307,16 @@ static void kernel_handle_request(void)
        }
        break;
 
+   case SERVICE_SUBSCRIBE:
+   {
+       kernel_service_subscribe();
+       break;
+   }
+   case SERVICE_PUBLISH:
+   {
+       kernel_service_publish();
+       break;
+   }
     default:
         /* Should never happen */
         error_msg = ERR_RUN_5_RTOS_INTERNAL_ERROR;
@@ -745,6 +764,53 @@ static void kernel_terminate_task(void)
     enqueue(&dead_pool_queue, cur_task);
 }
 
+static void kernel_enqueue_task(task_descriptor_t* task)
+{
+    task->state = READY;
+
+    switch(task->level)
+    {
+    case SYSTEM:
+        enqueue(&system_queue, task);
+        break;
+    case RR:
+        enqueue(&rr_queue, task);
+        break;
+    default:
+        ;
+    }
+}
+
+static void kernel_service_subscribe()
+{
+    if (cur_task->level == PERIODIC)
+    {
+        error_msg = ERR_RUN_6_INVALID_REQUEST;
+        OS_Abort();
+    }
+
+    cur_task->state = WAITING;
+
+    enqueue(&requested_service->subscribers, cur_task);
+}
+
+static void kernel_service_publish()
+{
+    if (requested_service->subscribers.head)
+    {
+        // Pre-empt current task
+        kernel_enqueue_task(cur_task);
+    }
+
+    while(requested_service->subscribers.head)
+    {
+        task_descriptor_t *subscriber =
+                dequeue(&requested_service->subscribers);
+
+        kernel_enqueue_task(subscriber);
+    }
+}
+
 /*
  * Queue manipulation.
  */
@@ -959,6 +1025,14 @@ void OS_Init()
     dead_pool_queue.head = &task_desc[0];
     dead_pool_queue.tail = &task_desc[MAXPROCESS - 1];
 
+    // Initialize services:
+
+    for (i = 0; i < MAX_SERVICE_COUNT; ++i)
+    {
+        services[i].subscribers.head = NULL;
+        services[i].subscribers.tail = NULL;
+    }
+
 	/* Create idle "task" */
     kernel_request_create_args.f = (voidfuncvoid_ptr)idle;
     kernel_request_create_args.level = IDLE;
@@ -1168,6 +1242,52 @@ int Task_GetArg(void)
     SREG = sreg;
 
     return arg;
+}
+
+SERVICE *Service_Init()
+{
+    SERVICE* service = NULL;
+
+    uint8_t sreg = SREG;
+    Disable_Interrupt();
+
+    if (service_count < MAX_SERVICE_COUNT)
+    {
+        service = &services[service_count];
+        ++service_count;
+    }
+
+    SREG = sreg;
+
+    return service;
+}
+
+void Service_Subscribe( SERVICE *s, int16_t *v )
+{
+    uint8_t sreg = SREG;
+    Disable_Interrupt();
+
+    kernel_request = SERVICE_SUBSCRIBE;
+    requested_service = s;
+    enter_kernel();
+
+    *v = s->value;
+
+    SREG = sreg;
+}
+
+void Service_Publish( SERVICE *s, int16_t v )
+{
+    uint8_t sreg = SREG;
+    Disable_Interrupt();
+
+    s->value = v;
+
+    kernel_request = SERVICE_PUBLISH;
+    requested_service = s;
+    enter_kernel();
+
+    SREG = sreg;
 }
 
 uint16_t Now()
