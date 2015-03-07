@@ -840,7 +840,16 @@ static void kernel_update_ticker(void)
 
     ++current_tick;
 
-    if (current_periodic_task)
+    // Note: We only count ticks_since_current_periodic_task
+    // when the task is running. Effectly, we extend its allowed
+    // execution time by the interleaved running time of
+    // higher priority tasks.
+
+    // However, this might violate the assertion that there is
+    // no running task when the next task should run
+    // (see kernel_select_periodic_task function).
+
+    if (current_periodic_task && current_periodic_task == cur_task)
     {
         ++ticks_since_current_periodic_task;
         if (ticks_since_current_periodic_task >=
