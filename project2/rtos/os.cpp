@@ -74,6 +74,8 @@ static bool periodic_tasks_running = false;
 static uint16_t ticks_since_current_periodic_task = 0;
 static uint16_t ticks_to_next_periodic_task = 0;
 
+// Milliseconds counter:
+static volatile uint16_t elapsed_milliseconds = 0;
 
 // Maybe set current_periodic_task.
 // Update ticks_to_next_periodic_task.
@@ -584,6 +586,13 @@ void TIMER1_COMPA_vect(void)
     asm volatile ("ret\n"::);
 }
 
+ISR(TIMER3_COMPA_vect)
+{
+    ++elapsed_milliseconds;
+
+    OCR3A += 250;
+}
+
 /*
  * Tasks Functions
  */
@@ -877,7 +886,20 @@ void OS_Init()
 
     /* Set up the clocks */
 
+    // Timer 1 used for ticks (periodic tasks)
     TCCR1B |= (_BV(CS11));
+
+    // Timer 2 used to count ms
+    // Set 1/64 prescaler; 1ms = 250 cycles
+    TCCR3B = (_BV(CS31) | _BV(CS30));
+    // Enable interrupt
+    TIMSK3 = _BV(OCIE3A);
+    // Set compare to now + 250 cycles
+    OCR3A = TCNT3 + 250;
+    // Clear compare flag
+    TIFR3 = _BV(OCF3A);
+
+    elapsed_milliseconds = 0;
 
 #ifdef SLOW_CLOCK
     kernel_slow_clock();
@@ -1106,6 +1128,20 @@ int Task_GetArg(void)
     SREG = sreg;
 
     return arg;
+}
+
+uint16_t Now()
+{
+    uint16_t now;
+
+    uint8_t sreg = SREG;
+    Disable_Interrupt();
+
+    now = elapsed_milliseconds;
+
+    SREG = sreg;
+
+    return now;
 }
 
 /**
