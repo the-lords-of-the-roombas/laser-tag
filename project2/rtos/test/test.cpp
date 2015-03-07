@@ -53,12 +53,34 @@ void blink_led()
 
 int r_main()
 {
-    Task_Create_Periodic(toggle_led, 0, 100, 1, 0);
-    Task_Create_Periodic(dummy, 0, 100, 5, 401);
+    //Task_Create_Periodic(toggle_led, 0, 100, 1, 0);
+    //Task_Create_Periodic(dummy, 0, 100, 5, 401);
+    //Task_Periodic_Start();
 
-    Task_Periodic_Start();
 
-    //for(;;) {}
-
+    uint16_t then = Now();
+    bool led_on = false;
+    uint16_t timeout = 0;
+#if 1
+    for(;;)
+    {
+        uint16_t now = Now();
+        if (now - then >= timeout)
+        {
+            led_on = !led_on;
+            if (led_on)
+            {
+                timeout = 100;
+                PORTB = (1 << PORTB7);
+            }
+            else
+            {
+                timeout = 900;
+                PORTB = 0;
+            }
+            then = now;
+        }
+    }
+#endif
     return 0;
 }
