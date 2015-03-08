@@ -14,3 +14,6 @@ add_rtos_test(test-periodic-schedule test_periodic_schedule.cpp)
 add_rtos_test(test-publish-system test_publish_system.cpp)
 
 add_rtos_test(test-publish-periodic test_publish_periodic.cpp)
+
+add_rtos_test(trace-rr trace_rr.cpp)
+add_rtos_test(trace-service trace_service.cpp)

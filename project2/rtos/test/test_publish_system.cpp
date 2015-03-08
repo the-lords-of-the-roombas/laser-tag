@@ -44,7 +44,7 @@ int r_main()
 
     for(;;)
     {
-        Task_Create_System(publisher, 0);
+        Task_Create_System(publisher, 1);
         receive(service);
     }
 

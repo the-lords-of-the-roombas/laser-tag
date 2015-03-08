@@ -21,7 +21,7 @@ void blinker()
 int r_main()
 {
     Task_Create_Periodic(blinker, 0, 200, 30, 0);
-    Task_Create_Periodic(blinker, 0, 200, 30, 700);
+    Task_Create_Periodic(blinker, 0, 200, 30, 500);
 
     for(int i = 0; i < 10; ++i)
         _delay_ms(100);
