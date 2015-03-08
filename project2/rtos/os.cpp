@@ -19,6 +19,7 @@
 #include "os.h"
 #include "kernel.h"
 #include "error_code.h"
+#include "arduino_pins.h"
 
 /* Needed for memset */
 /* #include <string.h> */
@@ -127,52 +128,58 @@ typedef enum pin_value {
     PIN_HIGH = 1
 } pin_value_t;
 
-#define SET_PIN_2_MODE_OUT (DDRE |= 1 << DDE4)
-#define SET_PIN_3_MODE_OUT (DDRE |= 1 << DDE5)
-#define SET_PIN_4_MODE_OUT (DDRG |= 1 << DDG5)
-#define SET_PIN_5_MODE_OUT (DDRE |= 1 << DDE3)
-#define SET_PIN_6_MODE_OUT (DDRH |= 1 << DDH3)
-#define SET_PIN_7_MODE_OUT (DDRH |= 1 << DDH4)
-
-#define SET_BIT(FIELD, BIT, VAL) { if(VAL) FIELD |= _BV(BIT); else FIELD &= ~_BV(BIT); }
-
-#define SET_PIN_2_VAL(VAL) SET_BIT(PORTE, PE4, VAL)
-#define SET_PIN_3_VAL(VAL) SET_BIT(PORTE, PE5, VAL)
-#define SET_PIN_4_VAL(VAL) SET_BIT(PORTG, PG5, VAL)
-#define SET_PIN_5_VAL(VAL) SET_BIT(PORTE, PE3, VAL)
-#define SET_PIN_6_VAL(VAL) SET_BIT(PORTH, PH3, VAL)
-#define SET_PIN_7_VAL(VAL) SET_BIT(PORTH, PH4, VAL)
-
-void set_pin_val(uint8_t pin, pin_value_t val)
+void set_pin(uint8_t pin)
 {
     switch(pin)
     {
     case 2:
-        SET_PIN_2_VAL(val); break;
+        SET_PIN2; break;
     case 3:
-        SET_PIN_3_VAL(val); break;
+        SET_PIN3; break;
     case 4:
-        SET_PIN_4_VAL(val); break;
+        SET_PIN4; break;
     case 5:
-        SET_PIN_5_VAL(val); break;
+        SET_PIN5; break;
     case 6:
-        SET_PIN_6_VAL(val); break;
+        SET_PIN6; break;
     case 7:
-        SET_PIN_7_VAL(val); break;
+        SET_PIN7; break;
     default:
         ;
     }
 }
 
-void trace_task(task_descriptor_t *task, pin_value_t val)
+void clear_pin(uint8_t pin)
 {
-    uint8_t pin = ((uint8_t) task->arg) + 2;
-    set_pin_val(pin, val);
+    switch(pin)
+    {
+    case 2:
+        CLEAR_PIN2; break;
+    case 3:
+        CLEAR_PIN3; break;
+    case 4:
+        CLEAR_PIN4; break;
+    case 5:
+        CLEAR_PIN5; break;
+    case 6:
+        CLEAR_PIN6; break;
+    case 7:
+        CLEAR_PIN7; break;
+    default:
+        ;
+    }
 }
 
-void trace_current_task(pin_value_t val)
+void trace_task_set(task_descriptor_t *task)
 {
-    trace_task(cur_task, val);
+    uint8_t pin = ((uint8_t) task->arg) + 2;
+    set_pin(pin);
+}
+
+void trace_task_clear(task_descriptor_t *task)
+{
+    uint8_t pin = ((uint8_t) task->arg) + 2;
+    clear_pin(pin);
 }
 
 /*
@@ -256,11 +263,11 @@ static void kernel_dispatch(void)
 
         cur_task->state = RUNNING;
     }
-#if TRACE_TASKS
+#ifdef TRACE_TASKS
     if (last_task != cur_task)
     {
-        trace_task(last_task, PIN_LOW);
-        trace_task(cur_task, PIN_HIGH);
+        trace_task_clear(last_task);
+        trace_task_set(cur_task);
     }
 #endif
 }
@@ -498,7 +505,7 @@ static void exit_kernel(void)
     kernel_sp = SP;
 
 #ifdef TRACE_KERNEL_MODE
-    trace_current_task(PIN_HIGH);
+    trace_task_set(cur_task);
 #endif
 
     /*
@@ -547,7 +554,7 @@ static void enter_kernel(void)
     cur_task->sp = (uint8_t*)SP;
 
 #ifdef TRACE_KERNEL_MODE
-    trace_current_task(PIN_LOW);
+    trace_task_clear(cur_task);
 #endif
 
     /*
@@ -614,7 +621,7 @@ void TIMER1_COMPA_vect(void)
     SP = kernel_sp;
 
 #if defined(TRACE_KERNEL_MODE) && defined(TRACE_KERNEL_MODE_ON_TICK)
-    trace_current_task(PIN_LOW);
+    trace_task_clear(cur_task);
 #endif
 
     /*
@@ -1056,19 +1063,19 @@ void OS_Init()
 
     // Set up debug pins
 #if defined(TRACE_KERNEL_MODE) || defined(TRACE_TASKS)
-    SET_PIN_2_MODE_OUT;
-    SET_PIN_3_MODE_OUT;
-    SET_PIN_4_MODE_OUT;
-    SET_PIN_5_MODE_OUT;
-    SET_PIN_6_MODE_OUT;
-    SET_PIN_7_MODE_OUT;
+    SET_PIN2_OUT;
+    SET_PIN3_OUT;
+    SET_PIN4_OUT;
+    SET_PIN5_OUT;
+    SET_PIN6_OUT;
+    SET_PIN7_OUT;
 
-    SET_PIN_2_VAL(PIN_LOW);
-    SET_PIN_3_VAL(PIN_LOW);
-    SET_PIN_4_VAL(PIN_LOW);
-    SET_PIN_5_VAL(PIN_LOW);
-    SET_PIN_6_VAL(PIN_LOW);
-    SET_PIN_7_VAL(PIN_LOW);
+    CLEAR_PIN2;
+    CLEAR_PIN3;
+    CLEAR_PIN4;
+    CLEAR_PIN5;
+    CLEAR_PIN6;
+    CLEAR_PIN7;
 #endif
 
     // Set up Timer 1 to count ticks...
