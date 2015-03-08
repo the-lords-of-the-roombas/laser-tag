@@ -114,6 +114,61 @@ static void idle (void);
 static void _delay_25ms(void);
 static void kernel_assert(bool flag);
 
+// Arduino
+
+typedef enum pin_mode {
+    PIN_INPUT = 0,
+    PIN_OUTPUT = 1
+} pin_mode_t;
+
+typedef enum pin_value {
+    PIN_LOW = 0,
+    PIN_HIGH = 1
+} pin_value_t;
+
+#define SET_PIN_2_MODE_OUT (DDRE |= 1 << DDE4)
+#define SET_PIN_3_MODE_OUT (DDRE |= 1 << DDE5)
+#define SET_PIN_4_MODE_OUT (DDRG |= 1 << DDG5)
+#define SET_PIN_5_MODE_OUT (DDRE |= 1 << DDE3)
+#define SET_PIN_6_MODE_OUT (DDRH |= 1 << DDH3)
+#define SET_PIN_7_MODE_OUT (DDRH |= 1 << DDH4)
+
+#define SET_BIT(FIELD, BIT, VAL) { if(VAL) FIELD |= _BV(BIT); else FIELD &= ~_BV(BIT); }
+
+#define SET_PIN_2_VAL(VAL) SET_BIT(PORTE, PE4, VAL)
+#define SET_PIN_3_VAL(VAL) SET_BIT(PORTE, PE5, VAL)
+#define SET_PIN_4_VAL(VAL) SET_BIT(PORTG, PG5, VAL)
+#define SET_PIN_5_VAL(VAL) SET_BIT(PORTE, PE3, VAL)
+#define SET_PIN_6_VAL(VAL) SET_BIT(PORTH, PH3, VAL)
+#define SET_PIN_7_VAL(VAL) SET_BIT(PORTH, PH4, VAL)
+
+void set_pin_val(uint8_t pin, pin_value_t val)
+{
+    switch(pin)
+    {
+    case 2:
+        SET_PIN_2_VAL(val); break;
+    case 3:
+        SET_PIN_3_VAL(val); break;
+    case 4:
+        SET_PIN_4_VAL(val); break;
+    case 5:
+        SET_PIN_5_VAL(val); break;
+    case 6:
+        SET_PIN_6_VAL(val); break;
+    case 7:
+        SET_PIN_7_VAL(val); break;
+    default:
+        ;
+    }
+}
+
+void trace_current_task(pin_value_t val)
+{
+    uint8_t pin = ((uint8_t) cur_task->arg) + 2;
+    set_pin_val(pin, val);
+}
+
 /*
  * FUNCTIONS
  */
@@ -429,6 +484,10 @@ static void exit_kernel(void)
      */
     kernel_sp = SP;
 
+#ifdef DEBUG_KERNEL_MODE
+    trace_current_task(PIN_LOW);
+#endif
+
     /*
      * Now restore the task's context, SP first.
      */
@@ -473,6 +532,10 @@ static void enter_kernel(void)
      * The last piece of the context is the SP. Save it to a variable.
      */
     cur_task->sp = (uint8_t*)SP;
+
+#ifdef DEBUG_KERNEL_MODE
+    trace_current_task(PIN_HIGH);
+#endif
 
     /*
      * Now restore the kernel's context, SP first.
@@ -536,6 +599,10 @@ void TIMER1_COMPA_vect(void)
      * the kernel stack and use it. We will restore it again later.
      */
     SP = kernel_sp;
+
+#ifdef DEBUG_KERNEL_MODE
+    trace_current_task(PIN_HIGH);
+#endif
 
     /*
      * Inform the kernel that this task was interrupted.
@@ -961,6 +1028,8 @@ void OS_Init()
     /* Create "main" task as SYSTEM level. */
     kernel_request_create_args.f = (voidfuncvoid_ptr)r_main;
     kernel_request_create_args.level = SYSTEM;
+    // Arg 0 specifies usage of first debug pin:
+    kernel_request_create_args.arg = 0;
     kernel_create_task();
 
     /* First time through. Select "main" task to run first. */
@@ -968,7 +1037,24 @@ void OS_Init()
     cur_task->state = RUNNING;
 
     // Set up status LED:
-    DDRB = (1 << DDB7);
+    DDRB |= (1 << DDB7);
+
+    // Set up debug pins
+#if defined(DEBUG_KERNEL_MODE) || defined(DEBUG_KERNEL_REQUEST)
+    SET_PIN_2_MODE_OUT;
+    SET_PIN_3_MODE_OUT;
+    SET_PIN_4_MODE_OUT;
+    SET_PIN_5_MODE_OUT;
+    SET_PIN_6_MODE_OUT;
+    SET_PIN_7_MODE_OUT;
+
+    SET_PIN_2_VAL(PIN_LOW);
+    SET_PIN_3_VAL(PIN_LOW);
+    SET_PIN_4_VAL(PIN_LOW);
+    SET_PIN_5_VAL(PIN_LOW);
+    SET_PIN_6_VAL(PIN_LOW);
+    SET_PIN_7_VAL(PIN_LOW);
+#endif
 
     // Set up Timer 1 to count ticks...
     // Use 1/8 prescaler
@@ -1131,8 +1217,16 @@ void Task_Next()
     sreg = SREG;
     Disable_Interrupt();
 
+#if DEBUG_KERNEL_REQUEST
+    trace_current_task(PIN_HIGH);
+#endif
+
     kernel_request = TASK_NEXT;
     enter_kernel();
+
+#if DEBUG_KERNEL_REQUEST
+    trace_current_task(PIN_LOW);
+#endif
 
     SREG = sreg;
 }
