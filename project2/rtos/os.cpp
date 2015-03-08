@@ -836,11 +836,7 @@ static void kernel_service_subscribe()
 
 static void kernel_service_publish()
 {
-    if (requested_service->subscribers.head)
-    {
-        // Pre-empt current task
-        kernel_enqueue_task(cur_task);
-    }
+    bool had_subscribers = requested_service->subscribers.head;
 
     while(requested_service->subscribers.head)
     {
@@ -848,6 +844,12 @@ static void kernel_service_publish()
                 dequeue(&requested_service->subscribers);
 
         kernel_enqueue_task(subscriber);
+    }
+
+    // Pre-empt current task
+    if (had_subscribers)
+    {
+        kernel_enqueue_task(cur_task);
     }
 }
 
