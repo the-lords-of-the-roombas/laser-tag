@@ -163,10 +163,15 @@ void set_pin_val(uint8_t pin, pin_value_t val)
     }
 }
 
+void trace_task(task_descriptor_t *task, pin_value_t val)
+{
+    uint8_t pin = ((uint8_t) task->arg) + 2;
+    set_pin_val(pin, val);
+}
+
 void trace_current_task(pin_value_t val)
 {
-    uint8_t pin = ((uint8_t) cur_task->arg) + 2;
-    set_pin_val(pin, val);
+    trace_task(cur_task, val);
 }
 
 /*
@@ -225,6 +230,8 @@ static void kernel_dispatch(void)
      * kernel_handle_request() has already determined it should be selected.
      */
 
+    task_descriptor_t *last_task = cur_task;
+
     if(cur_task->state != RUNNING || cur_task == idle_task)
     {
 		if(system_queue.head != NULL)
@@ -248,6 +255,13 @@ static void kernel_dispatch(void)
 
         cur_task->state = RUNNING;
     }
+#if TRACE_TASKS
+    if (last_task != cur_task)
+    {
+        trace_task(last_task, PIN_LOW);
+        trace_task(cur_task, PIN_HIGH);
+    }
+#endif
 }
 
 
@@ -484,8 +498,8 @@ static void exit_kernel(void)
      */
     kernel_sp = SP;
 
-#ifdef DEBUG_KERNEL_MODE
-    trace_current_task(PIN_LOW);
+#ifdef TRACE_KERNEL_MODE
+    trace_current_task(PIN_HIGH);
 #endif
 
     /*
@@ -533,8 +547,8 @@ static void enter_kernel(void)
      */
     cur_task->sp = (uint8_t*)SP;
 
-#ifdef DEBUG_KERNEL_MODE
-    trace_current_task(PIN_HIGH);
+#ifdef TRACE_KERNEL_MODE
+    trace_current_task(PIN_LOW);
 #endif
 
     /*
@@ -600,8 +614,8 @@ void TIMER1_COMPA_vect(void)
      */
     SP = kernel_sp;
 
-#ifdef DEBUG_KERNEL_MODE
-    trace_current_task(PIN_HIGH);
+#if defined(TRACE_KERNEL_MODE) && defined(TRACE_KERNEL_MODE_ON_TICK)
+    trace_current_task(PIN_LOW);
 #endif
 
     /*
@@ -1023,13 +1037,14 @@ void OS_Init()
 	/* Create idle "task" */
     kernel_request_create_args.f = (voidfuncvoid_ptr)idle;
     kernel_request_create_args.level = IDLE;
+    kernel_request_create_args.arg = 0;
     kernel_create_task();
 
     /* Create "main" task as SYSTEM level. */
     kernel_request_create_args.f = (voidfuncvoid_ptr)r_main;
     kernel_request_create_args.level = SYSTEM;
     // Arg 0 specifies usage of first debug pin:
-    kernel_request_create_args.arg = 0;
+    kernel_request_create_args.arg = 1;
     kernel_create_task();
 
     /* First time through. Select "main" task to run first. */
@@ -1040,7 +1055,7 @@ void OS_Init()
     DDRB |= (1 << DDB7);
 
     // Set up debug pins
-#if defined(DEBUG_KERNEL_MODE) || defined(DEBUG_KERNEL_REQUEST)
+#if defined(TRACE_KERNEL_MODE) || defined(TRACE_TASKS)
     SET_PIN_2_MODE_OUT;
     SET_PIN_3_MODE_OUT;
     SET_PIN_4_MODE_OUT;
@@ -1217,16 +1232,8 @@ void Task_Next()
     sreg = SREG;
     Disable_Interrupt();
 
-#if DEBUG_KERNEL_REQUEST
-    trace_current_task(PIN_HIGH);
-#endif
-
     kernel_request = TASK_NEXT;
     enter_kernel();
-
-#if DEBUG_KERNEL_REQUEST
-    trace_current_task(PIN_LOW);
-#endif
 
     SREG = sreg;
 }
