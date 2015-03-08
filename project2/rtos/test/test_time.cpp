@@ -1,6 +1,7 @@
 #include <avr/io.h>
 #include <util/delay.h>
 #include "../os.h"
+#include "test_util.h"
 
 int r_main()
 {
@@ -17,12 +18,12 @@ int r_main()
             if (led_on)
             {
                 timeout = 100;
-                PORTB = (1 << PORTB7);
+                LED_ON;
             }
             else
             {
                 timeout = 900;
-                PORTB = 0;
+                LED_OFF;
             }
             then = now;
         }

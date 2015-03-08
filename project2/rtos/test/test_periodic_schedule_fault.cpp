@@ -3,19 +3,12 @@
 #include "../os.h"
 #include "test_util.h"
 
-void set_led_on()
+void blink_led()
 {
     for(;;)
     {
         LED_ON;
-        Task_Next();
-    }
-}
-
-void set_led_off()
-{
-    for(;;)
-    {
+        _delay_ms(20);
         LED_OFF;
         Task_Next();
     }
@@ -23,8 +16,10 @@ void set_led_off()
 
 int r_main()
 {
-    Task_Create_Periodic(set_led_on, 2, 200, 2, 0);
-    Task_Create_Periodic(set_led_off, 3, 200, 2, 300);
+    // WCET of second task makes it overlap with the first task
+    // OS should abort at start of second task.
+    Task_Create_Periodic(blink_led, 2, 200, 10, 0);
+    Task_Create_Periodic(blink_led, 3, 200, 150, 300);
 
     for(int i = 0; i < 10; ++i)
         _delay_ms(100);
