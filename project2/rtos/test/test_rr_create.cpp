@@ -1,35 +1,33 @@
 #include <avr/io.h>
 #include <util/delay.h>
 #include "../os.h"
+#include "../arduino_pins.h"
 #include "test_util.h"
-
-volatile int count = 0;
 
 void task()
 {
-    for(int i = 0; i < 10; ++i)
-    {
-        _delay_ms(100);
+    for(;;) {
+        SET_PIN9;
+        _delay_ms(20);
+        CLEAR_PIN9;
+        _delay_ms(20);
     }
-
-    for(int i = 0; i < 3; ++i)
-    {
-        LED_ON;
-        _delay_ms(200);
-        LED_OFF;
-        _delay_ms(200);
-    }
-
 }
 
 int r_main()
 {
-    Task_Create_RR(task, 2);
+    SET_PIN8_OUT;
+    SET_PIN9_OUT;
+    CLEAR_PIN8;
+    CLEAR_PIN9;
 
-    for(int i = 0; i < 10; ++i)
-    {
-        _delay_ms(100);
-    }
+    _delay_ms(50);
+
+    SET_PIN8;
+    Task_Create_RR(task, 2);
+    CLEAR_PIN8;
+
+    _delay_ms(50);
 
     return 0;
 }

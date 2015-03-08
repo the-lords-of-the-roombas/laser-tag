@@ -1,31 +1,41 @@
 #include <avr/io.h>
 #include <util/delay.h>
 #include "../os.h"
+#include "../arduino_pins.h"
 #include "test_util.h"
+
+void delay_ms(int count)
+{
+    for(int i = 0; i < count; ++i)
+        _delay_ms(1);
+}
 
 int r_main()
 {
-    uint16_t then = Now();
-    bool led_on = false;
-    uint16_t timeout = 0;
+    SET_PIN8_OUT;
+    SET_PIN9_OUT;
+    CLEAR_PIN8;
+    CLEAR_PIN9;
+
+    _delay_ms(20);
 
     for(;;)
     {
-        uint16_t now = Now();
-        if (now - then >= timeout)
+        for(int measure_duration = 3;
+            measure_duration < 15;
+            measure_duration += 3)
         {
-            led_on = !led_on;
-            if (led_on)
-            {
-                timeout = 100;
-                LED_ON;
-            }
-            else
-            {
-                timeout = 900;
-                LED_OFF;
-            }
-            then = now;
+            SET_PIN8;
+            uint16_t measure_start = Now();
+            delay_ms(measure_duration);
+            uint16_t measure_end = Now();
+            CLEAR_PIN8;
+
+            uint16_t duration = measure_end - measure_start;
+
+            SET_PIN9;
+            delay_ms(duration);
+            CLEAR_PIN9;
         }
     }
 

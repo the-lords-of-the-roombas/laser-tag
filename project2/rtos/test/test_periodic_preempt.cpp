@@ -12,7 +12,7 @@ void system_task()
     CLEAR_PIN9;
 }
 
-void periodic_task1()
+void periodic_task()
 {
     for(;;)
     {
@@ -21,11 +21,6 @@ void periodic_task1()
         CLEAR_PIN8;
         Task_Next();
     }
-}
-
-void periodic_task2()
-{
-    for(;;) { Task_Next(); }
 }
 
 int r_main()
@@ -37,12 +32,8 @@ int r_main()
 
     // Periodic task has WCET 1 tick, but it is being preempted by
     // the system task for 2 ticks.
-    // Its allowed running time is extended when preempted.
-    // However, the second task start just 1 tick after the first,
-    // so the extended first task will run over the second's onset,
-    // at which time the OS should abort.
-    Task_Create_Periodic(periodic_task1, 2, 5, 1, 10);
-    Task_Create_Periodic(periodic_task2, 2, 5, 1, 11);
+    // However, its allowed running time should be extended when preempted.
+    Task_Create_Periodic(periodic_task, 2, 5, 1, 10);
     Task_Periodic_Start();
 
     return 0;

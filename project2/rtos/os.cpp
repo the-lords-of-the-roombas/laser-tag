@@ -1132,23 +1132,31 @@ void OS_Abort(void)
 
     Disable_Interrupt();
 
+#ifdef TRACE_TASKS
+    SET_PIN2;
+    SET_PIN3;
+    SET_PIN4;
+    SET_PIN5;
+    SET_PIN6;
+    SET_PIN7;
+#endif
+
     // Use built-in LED on digital pin 13 (PB7)
 
-    DDRB = (1 << DDB7);
+    SET_PIN13_OUT;
 
     flashes = error_msg + 1;
-    mask = (1 << PORTB7);
 
     for(;;)
     {
-        PORTB = mask;
+        SET_PIN13;
 
         for(i = 0; i < 100; ++i)
         {
                _delay_25ms();
         }
 
-        PORTB = (uint8_t) 0;
+        CLEAR_PIN13;
 
         for(i = 0; i < 40; ++i)
         {
@@ -1158,14 +1166,14 @@ void OS_Abort(void)
 
         for(j = 0; j < flashes; ++j)
         {
-            PORTB = mask;
+            SET_PIN13;
 
             for(i = 0; i < 10; ++i)
             {
                 _delay_25ms();
             }
 
-            PORTB = (uint8_t) 0;
+            CLEAR_PIN13;
 
             for(i = 0; i < 10; ++i)
             {

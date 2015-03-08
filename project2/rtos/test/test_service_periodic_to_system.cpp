@@ -1,44 +1,41 @@
 #include <avr/io.h>
 #include <util/delay.h>
 #include "../os.h"
+#include "../arduino_pins.h"
 #include "test_util.h"
 
 SERVICE *service;
 
 void publisher()
 {
-    int16_t count = 0;
-
     for(;;)
     {
-        Service_Publish(service, count);
+        SET_PIN9;
+        SET_PIN8;
+        Service_Publish(service, 0);
+        _delay_ms(1);
+        CLEAR_PIN9;
         Task_Next();
-
-        ++count;
     }
 }
 
 int r_main()
 {
+    SET_PIN8_OUT;
+    SET_PIN9_OUT;
+    CLEAR_PIN8;
+    CLEAR_PIN9;
+
     service = Service_Init();
 
-    Task_Create_Periodic(publisher, 2, 20, 3, 0);
+    Task_Create_Periodic(publisher, 2, 1, 1, 4);
     Task_Periodic_Start();
-
-    bool on = false;
 
     for(;;)
     {
         int16_t val;
         Service_Subscribe(service, &val);
-
-        if (val % 5 == 0)
-            on = !on;
-
-        if (on)
-            LED_ON;
-        else
-            LED_OFF;
+        CLEAR_PIN8;
     }
 
     return 0;

@@ -2,15 +2,15 @@
 #include <avr/interrupt.h>
 #include <util/delay.h>
 #include "../os.h"
+#include "../arduino_pins.h"
 #include "test_util.h"
 
 void setup_timer()
 {
-    // Set up Timer 1 to count ticks...
     // Use 1/64 prescaler
     TCCR3B = (_BV(CS31) | _BV(CS30));
-    // Time out after 25000 cycles = 0.1 sec
-    OCR3A = TCNT3 + 25000U;
+    // Time out after 2500 cycles = 10 ms
+    OCR3A = TCNT3 + 2500U;
     // Clear timeout flag
     TIFR3 = _BV(OCF3A);
     // Enable interrupt
@@ -19,40 +19,47 @@ void setup_timer()
 
 SERVICE * volatile service;
 
-int16_t interrupt_count = 0;
+static int16_t count = 5;
 
 ISR(TIMER3_COMPA_vect)
 {
-    OCR3A += 25000U;
-    ++interrupt_count;
-    Service_Publish(service, interrupt_count);
+    OCR3A += 2500U;
+
+    SET_PIN8;
+    Service_Publish(service, count);
+
+    --count;
+    if (!count)
+        count = 5;
 }
 
 void subscriber()
 {
-    bool on = false;
     for(;;)
     {
         int16_t val;
         Service_Subscribe(service, &val);
+        CLEAR_PIN8;
 
-        if (val % 5 == 0)
-            on = !on;
-
-        if (on)
-            LED_ON;
-        else
-            LED_OFF;
+        SET_PIN9;
+        for(int i = 0; i < val; ++i)
+            _delay_ms(1);
+        CLEAR_PIN9;
     }
 }
 
 int r_main()
 {
+    SET_PIN8_OUT;
+    SET_PIN9_OUT;
+    CLEAR_PIN8;
+    CLEAR_PIN9;
+
     service = Service_Init();
 
-    setup_timer();
-
     Task_Create_RR(subscriber, 2);
+
+    setup_timer();
 
     return 0;
 }

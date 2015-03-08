@@ -1,35 +1,36 @@
 #include <avr/io.h>
 #include <util/delay.h>
 #include "../os.h"
+#include "../arduino_pins.h"
 #include "test_util.h"
-
-volatile int count = 0;
 
 void task()
 {
-    bool on = false;
-
-    for(int i = 0; i < 4; ++i)
+    SET_PIN9;
+    for(;;)
     {
-        on = !on;
-        if(on)
-            LED_ON;
-        else
-            LED_OFF;
+        _delay_ms(1);
+        CLEAR_PIN9;
         Task_Next();
+        SET_PIN9;
     }
 }
 
 int r_main()
 {
-    Task_Create_Periodic(task, 2, 100, 2, 100);
+    SET_PIN8_OUT;
+    SET_PIN9_OUT;
 
-    LED_ON;
-    for(int i = 0; i < 10; ++i)
-    {
-        _delay_ms(100);
-    }
-    LED_OFF;
+    CLEAR_PIN8;
+    CLEAR_PIN9;
+
+    _delay_ms(20);
+
+    SET_PIN8;
+    Task_Create_Periodic(task, 2, 1, 1, 0);
+    CLEAR_PIN8;
+
+    _delay_ms(20);
 
     Task_Periodic_Start();
 

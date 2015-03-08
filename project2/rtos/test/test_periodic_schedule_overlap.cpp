@@ -52,8 +52,10 @@ int r_main()
 
     _delay_ms(20);
 
+    // WCET of second task makes it overlap with the first task
+    // OS should abort at start of second task.
     Task_Create_Periodic(task1, 2, 2, 1, 0);
-    Task_Create_Periodic(task2, 3, 4, 1, 1);
+    Task_Create_Periodic(task2, 3, 4, 3, 1);
     Task_Create_Periodic(task3, 4, 4, 1, 3);
 
     _delay_ms(20);
