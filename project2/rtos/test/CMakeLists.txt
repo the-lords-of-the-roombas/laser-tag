@@ -19,9 +19,7 @@ add_rtos_test(test-rr-interleave test_rr_interleave.cpp)
 
 add_rtos_test(test-time test_time.cpp)
 
-add_rtos_test(test-publish-system test_publish_system.cpp)
-
-add_rtos_test(test-publish-periodic test_publish_periodic.cpp)
-
-add_rtos_test(trace-rr trace_rr.cpp)
-add_rtos_test(trace-service trace_service.cpp)
+add_rtos_test(test-service-system-to-system test_service_system_to_system.cpp)
+add_rtos_test(test-service-periodic-to-system test_service_periodic_to_system.cpp)
+add_rtos_test(test-service-rr-to-system test_service_periodic_to_system.cpp)
+add_rtos_test(test-service-isr-to-system test_service_isr_to_system.cpp)
