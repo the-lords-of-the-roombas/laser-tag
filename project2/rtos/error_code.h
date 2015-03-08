@@ -15,47 +15,20 @@
 
 enum {
 
-/** GREEN ERRORS -- Initialize time errors. */
-    
-/** PPP invalid -- Names must be in range [0 .. MAXPROCESS] */
-ERR_1_PPP_NAME_OUT_OF_RANGE,
+    // 1: User called OS_Abort().
+    ERR_USER_CALLED_OS_ABORT = 0,
 
-/** PERIODIC name is out of range [1 .. MAXNAME] */
-ERR_2_CREATE_NAME_OUT_OF_RANGE,
+    // 2: Periodic task created after periodic schedule start
+    ERR_PERIODIC_SCHEDULE_SETUP,
 
-/** PERIODIC task assigned name IDLE */
-ERR_3_PERIODIC_NAMED_IDLE,
+    // 3: Periodic schedule invalid (tasks overlap)
+    ERR_PERIODIC_SCHEDULE_RUN,
 
-/** PERIODIC name already used */
-ERR_4_PERIODIC_NAME_IN_USE,
+    // 4: Periodic task not allowed to subscribe to service
+    ERR_SERVICE_SUBSCRIBE,
 
-/** PERIODIC name not in PPP array */
-ERR_5_NAME_NOT_IN_PPP,
-
-/** Time interval 0 in PPP array */
-ERR_6_TIME_INTERVAL_IN_PPP_0,
-
-
-/** RED ERRORS -- Run time errors. */
-
-/** User called OS_Abort() */
-ERR_RUN_1_USER_CALLED_OS_ABORT,
-
-/** Too many tasks created. Only allowed MAXPROCESS at any time.*/
-ERR_RUN_2_TOO_MANY_TASKS,
-
-/** PERIODIC task still running at end of time slot. */
-ERR_RUN_3_PERIODIC_TOOK_TOO_LONG,
-
-/** ISR made a request that only tasks are allowed. */
-ERR_RUN_4_ILLEGAL_ISR_KERNEL_REQUEST,
-
-/** RTOS Internal error in handling request. */
-ERR_RUN_5_RTOS_INTERNAL_ERROR,
-
-/** Invalid request by user **/
-ERR_RUN_6_INVALID_REQUEST,
-
+    // 5: RTOS Internal error.
+    ERR_RTOS_INTERNAL_ERROR,
 };
 
 

@@ -83,7 +83,7 @@ static uint16_t ticks_since_current_periodic_task = 0;
 static void kernel_select_periodic_task();
 
 /** Error message used in OS_Abort() */
-static uint8_t volatile error_msg = ERR_RUN_1_USER_CALLED_OS_ABORT;
+static uint8_t volatile error_msg = ERR_USER_CALLED_OS_ABORT;
 
 
 /* Forward declarations */
@@ -112,6 +112,7 @@ static void queue_erase(queue_t*, task_descriptor_t*);
 static void kernel_update_ticker(void);
 static void idle (void);
 static void _delay_25ms(void);
+static void kernel_abort_with(uint8_t error);
 static void kernel_assert(bool flag);
 
 // Arduino
@@ -338,8 +339,7 @@ static void kernel_handle_request(void)
         }
         else
         {
-            error_msg = ERR_RUN_6_INVALID_REQUEST;
-            OS_Abort();
+            kernel_abort_with(ERR_PERIODIC_SCHEDULE_SETUP);
         }
         break;
 
@@ -355,8 +355,7 @@ static void kernel_handle_request(void)
     }
     default:
         /* Should never happen */
-        error_msg = ERR_RUN_5_RTOS_INTERNAL_ERROR;
-        OS_Abort();
+        kernel_abort_with(ERR_RTOS_INTERNAL_ERROR);
         break;
     }
 
@@ -678,8 +677,7 @@ static int kernel_create_task()
         // Abort if periodic tasks running:
         if (periodic_tasks_running)
         {
-            error_msg = ERR_RUN_6_INVALID_REQUEST;
-            OS_Abort();
+            kernel_abort_with(ERR_PERIODIC_SCHEDULE_SETUP);
         }
     }
 
@@ -825,8 +823,7 @@ static void kernel_service_subscribe()
 {
     if (cur_task->level == PERIODIC)
     {
-        error_msg = ERR_RUN_6_INVALID_REQUEST;
-        OS_Abort();
+        kernel_abort_with(ERR_SERVICE_SUBSCRIBE);
     }
 
     cur_task->state = WAITING;
@@ -932,7 +929,10 @@ static void queue_erase(queue_t * q, task_descriptor_t * t)
 
 static void kernel_select_periodic_task()
 {
-    kernel_assert(!current_periodic_task);
+    if (current_periodic_task)
+    {
+        kernel_abort_with(ERR_PERIODIC_SCHEDULE_RUN);
+    }
 
     uint16_t next_task_distance = UINT16_MAX;
 
@@ -956,9 +956,8 @@ static void kernel_select_periodic_task()
 
     if (selected_task && selected_task->wcet > next_task_distance)
     {
-        // Task overlap. Abort.
-        error_msg = ERR_RUN_3_PERIODIC_TOOK_TOO_LONG;
-        OS_Abort();
+        // Task overlap.
+        kernel_abort_with(ERR_PERIODIC_SCHEDULE_RUN);
     }
 
     current_periodic_task = selected_task;
@@ -991,8 +990,7 @@ static void kernel_update_ticker(void)
         if (ticks_since_current_periodic_task >=
                 current_periodic_task->wcet)
         {
-            error_msg = ERR_RUN_3_PERIODIC_TOOK_TOO_LONG;
-            OS_Abort();
+            kernel_abort_with(ERR_PERIODIC_SCHEDULE_RUN);
         }
     }
 
@@ -1104,12 +1102,17 @@ static void _delay_25ms(void)
     _delay_ms(25);
 }
 
+static void kernel_abort_with(uint8_t error)
+{
+    error_msg = error;
+    OS_Abort();
+}
+
 static void kernel_assert(bool flag)
 {
     if (!flag)
     {
-        error_msg = ERR_RUN_5_RTOS_INTERNAL_ERROR;
-        OS_Abort();
+        kernel_abort_with(ERR_RTOS_INTERNAL_ERROR);
     }
 }
 
