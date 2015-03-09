@@ -12,13 +12,13 @@ void task()
     if (task_id > 5)
         task_id = 2;
 
-    _delay_ms(20);
+    _delay_ms(1);
 
     SET_PIN8;
     Task_Create_System(task, task_id);
     CLEAR_PIN8;
 
-    _delay_ms(20);
+    _delay_ms(1);
 }
 
 int r_main()
@@ -26,13 +26,13 @@ int r_main()
     SET_PIN8_OUT;
     CLEAR_PIN8;
 
-    _delay_ms(50);
+    _delay_ms(1);
 
     SET_PIN8;
     Task_Create_System(task, task_id);
     CLEAR_PIN8;
 
-    _delay_ms(50);
+    _delay_ms(1);
 
     return 0;
 }

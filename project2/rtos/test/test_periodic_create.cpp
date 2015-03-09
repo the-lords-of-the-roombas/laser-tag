@@ -24,13 +24,13 @@ int r_main()
     CLEAR_PIN8;
     CLEAR_PIN9;
 
-    _delay_ms(20);
+    _delay_ms(5);
 
     SET_PIN8;
     Task_Create_Periodic(task, 2, 1, 1, 0);
     CLEAR_PIN8;
 
-    _delay_ms(20);
+    _delay_ms(3);
 
     Task_Periodic_Start();
 

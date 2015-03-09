@@ -8,9 +8,9 @@ void task()
 {
     for(;;) {
         SET_PIN9;
-        _delay_ms(20);
+        _delay_ms(2);
         CLEAR_PIN9;
-        _delay_ms(20);
+        _delay_ms(2);
     }
 }
 
@@ -21,13 +21,13 @@ int r_main()
     CLEAR_PIN8;
     CLEAR_PIN9;
 
-    _delay_ms(50);
+    _delay_ms(5);
 
     SET_PIN8;
     Task_Create_RR(task, 2);
     CLEAR_PIN8;
 
-    _delay_ms(50);
+    _delay_ms(5);
 
     return 0;
 }

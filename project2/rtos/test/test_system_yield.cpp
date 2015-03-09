@@ -17,7 +17,7 @@ void task1()
     for(;;)
     {
         SET_PIN8;
-        _delay_ms(10);
+        _delay_ms(1);
         CLEAR_PIN8;
         yield();
     }
@@ -29,7 +29,7 @@ void task2()
     for(;;)
     {
         SET_PIN9;
-        _delay_ms(20);
+        _delay_ms(2);
         CLEAR_PIN9;
         yield();
     }
@@ -41,7 +41,7 @@ void task3()
     for(;;)
     {
         SET_PIN10;
-        _delay_ms(30);
+        _delay_ms(3);
         CLEAR_PIN10;
         yield();
     }
@@ -58,13 +58,13 @@ int r_main()
     CLEAR_PIN10;
     CLEAR_PIN11;
 
-    _delay_ms(50);
+    _delay_ms(5);
 
     Task_Create_System(task1, 2);
     Task_Create_System(task2, 3);
     Task_Create_System(task3, 4);
 
-    _delay_ms(50);
+    _delay_ms(5);
 
     return 0;
 }

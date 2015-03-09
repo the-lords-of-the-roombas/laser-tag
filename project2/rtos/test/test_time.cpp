@@ -11,7 +11,7 @@ int r_main()
     CLEAR_PIN8;
     CLEAR_PIN9;
 
-    _delay_ms(20);
+    _delay_ms(4);
 
     for(;;)
     {

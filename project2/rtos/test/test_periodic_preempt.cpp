@@ -33,7 +33,7 @@ int r_main()
     // Periodic task has WCET 1 tick, but it is being preempted by
     // the system task for 2 ticks.
     // However, its allowed running time should be extended when preempted.
-    Task_Create_Periodic(periodic_task, 2, 5, 1, 10);
+    Task_Create_Periodic(periodic_task, 2, 5, 1, 1);
     Task_Periodic_Start();
 
     return 0;

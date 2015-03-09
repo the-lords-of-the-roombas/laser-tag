@@ -50,13 +50,11 @@ int r_main()
     CLEAR_PIN9;
     CLEAR_PIN10;
 
-    _delay_ms(20);
-
     Task_Create_Periodic(task1, 2, 2, 1, 0);
     Task_Create_Periodic(task2, 3, 4, 1, 1);
     Task_Create_Periodic(task3, 4, 4, 1, 3);
 
-    _delay_ms(20);
+    _delay_ms(4);
 
     Task_Periodic_Start();
 

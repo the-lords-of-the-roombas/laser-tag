@@ -30,7 +30,7 @@ int r_main()
 
     Task_Create_RR(publisher, 2);
 
-    _delay_ms(5);
+    _delay_ms(2);
 
     for(;;)
     {

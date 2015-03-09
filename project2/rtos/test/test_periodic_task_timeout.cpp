@@ -32,14 +32,12 @@ int r_main()
     CLEAR_PIN8;
     CLEAR_PIN9;
 
-    _delay_ms(20);
-
     // Second task never yields, thus exceeding its WCET (2 ticks).
     // OS should abort at task 2 start + task 2 WCET = 2 ticks.
     Task_Create_Periodic(task1, 2, 5, 1, 0);
     Task_Create_Periodic(task2, 3, 5, 1, 1);
 
-    _delay_ms(20);
+    _delay_ms(9);
 
     Task_Periodic_Start();
 

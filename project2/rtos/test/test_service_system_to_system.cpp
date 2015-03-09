@@ -33,7 +33,7 @@ int r_main()
 
     Task_Create_System(publisher, 2);
 
-    _delay_ms(20);
+    _delay_ms(2);
 
     for(;;)
     {
