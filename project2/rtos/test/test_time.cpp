@@ -4,12 +4,6 @@
 #include "../arduino_pins.h"
 #include "test_util.h"
 
-void delay_ms(int count)
-{
-    for(int i = 0; i < count; ++i)
-        _delay_ms(1);
-}
-
 int r_main()
 {
     SET_PIN8_OUT;
