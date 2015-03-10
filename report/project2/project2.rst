@@ -94,7 +94,9 @@ is created and populated. The stack_bottom and stack_top are saved as integer po
 The code the task needs to run is then pushed onto the stack as well as the address of 
 Task_Terminate() to destroy the task if it ever returns. We then make the stack pointer 
 point to cell above stack (the top), and make room for 32 registers, SREG and two return 
-addresses. The task is then enqueued or added to the list according to it's level.::
+addresses. The task is then enqueued or added to the list according to it's level.
+
+::
 
 	int8_t Task_Create(uint8_t level, void (*f)(void), int16_t arg, uint16_t period, 
 	uint16_t wcet, uint16_t start)
@@ -159,24 +161,27 @@ ticks_at_next_periodic_schedule_check is also set to the next scheduled task tim
 
 We created a few variables to allow us to do this.
 
-A queue called periodic_task_list to hold all of our periodic tasks.
-	static queue_t periodic_task_list;
-	
+A queue called periodic_task_list to hold all of our periodic tasks::
+
+  static queue_t periodic_task_list;
+
 A pointer to the current running periodic task and a boolean value to determine if 
 the list of periodic tasks has begun running::
-	task_descriptor_t *current_periodic_task = NULL;
-	static bool periodic_tasks_running = false;
+
+  task_descriptor_t *current_periodic_task = NULL;
+  static bool periodic_tasks_running = false;
 
 Variables for timing management::
-	static uint16_t volatile ticks_since_system_start = 0;
-	static uint16_t ticks_at_next_periodic_schedule_check = 0;
-	static uint16_t ticks_since_current_periodic_task = 0;
 
-	
+  static uint16_t volatile ticks_since_system_start = 0;
+  static uint16_t ticks_at_next_periodic_schedule_check = 0;
+  static uint16_t ticks_since_current_periodic_task = 0;
+
 These are the methods we created to manage periodic task scheduling.
 
 void Task_Periodic_Start()
 ..........................
+
 This method sets the kernel_request to TASK_PERIODIC_START and enters the kernel. Once 
 in the kernel, the context and the current task’s stack pointer are saved. The system 
 changes to the kernel’s stack pointer and processes the request. The kernel handles the 
@@ -188,6 +193,7 @@ offset. Once complete, the context and the stack pointer are restored.
 
 static void kernel_select_periodic_task()
 .........................................
+
 This method scans the periodic_task_list. If there is a current task running, it returns. 
 If the ticks_since_system_start equals a tasks start time, it will start that task running. 
 It then iterates through all tasks in the periodic list and determines the next task to be 
@@ -201,6 +207,7 @@ The following methods were modified to handle our periodic task scheduling
 
 static void kernel_update_ticker(void)
 ......................................
+
 Our system is based on a count up of ticks rather than the "ticks_remaining" approach to 
 the original rtos given to us. The first thing this function does is increment 
 ticks_since_system_start. It then determines if there is a current_periodic_task and if 
@@ -213,6 +220,7 @@ is called and the selected task is started.
 
 static void kernel_handle_request(void)
 .......................................
+
 This is where the kernel determines what the request is and handles it appropriately.
 
 The request TASK_PERIODIC_START is the where the periodic task scheduler is initialized. 
@@ -226,6 +234,7 @@ list is processed and tasks are started.
 
 static void kernel_dispatch(void)
 .................................
+
 This method determines if there is no task running or if the idle task is running. If so, 
 a task is set to run. If there is a system task to run, it will set that task to run and 
 return. If not it will see if there is a current periodic task running. If so, this task 
@@ -241,6 +250,7 @@ The elapsed time is returned by calling the Now() function.
 
 uint16_t Now()
 ..............
+
 This method returns the current time in milliseconds. This is calculated by taking the 
 ticks since the system started (last_tick) and multiplying that by TICK; 5 milliseconds. 
 The time since the last tick is then calculated. First, the number of cycles at the last 
@@ -249,20 +259,22 @@ cycles in one tick. Then the extra clock cycles is calculated by subtracting tha
 from TCNT1. Finally, the extra clock cycles are converted into milliseconds by dividing 
 them by the amount of cycles per millisecond. The extra clock cycles are then added to 
 the ticks since the system started to return an accurate value for the time since the 
-system started.::
+system started.
 
-	/** The RTOS timer's prescaler divisor */
-	#define TIMER_PRESCALER 8
-	#define CYCLES_PER_MS ((F_CPU / TIMER_PRESCALER) / 1000)
+::
 
-	/** The number of clock cycles in one "tick" or 5 ms */
-	#define TICK_CYCLES (CYCLES_PER_MS * TICK)
+  /** The RTOS timer's prescaler divisor */
+  #define TIMER_PRESCALER 8
+  #define CYCLES_PER_MS ((F_CPU / TIMER_PRESCALER) / 1000)
 
-	uint16_t last_tick = ticks_since_system_start;
-	uint16_t cycles_at_last_tick = OCR1A - TICK_CYCLES;
-	uint16_t cycles_extra = TCNT1 - cycles_at_last_tick;
-	uint16_t ms_extra = cycles_extra / CYCLES_PER_MS;
-	ms_now = last_tick * TICK + ms_extra;
+  /** The number of clock cycles in one "tick" or 5 ms */
+  #define TICK_CYCLES (CYCLES_PER_MS * TICK)
+
+  uint16_t last_tick = ticks_since_system_start;
+  uint16_t cycles_at_last_tick = OCR1A - TICK_CYCLES;
+  uint16_t cycles_extra = TCNT1 - cycles_at_last_tick;
+  uint16_t ms_extra = cycles_extra / CYCLES_PER_MS;
+  ms_now = last_tick * TICK + ms_extra;
 
 
 Inter-process communication (services)
@@ -277,10 +289,12 @@ dequeued from the subscribers queue and added to the appropriate queue in the ke
 
 SERVICE *Service_Init()
 .......................
+
 This method returns an empty service that has been initialized in the services list.
 
 void Service_Subscribe( SERVICE *s, int16_t *v )
 ................................................
+
 Takes a pointer to a service and a value. The method sets the kernel_request to 
 SERVICE_SUBSCRIBE and enters the kernel. Once in the kernel, the context and the 
 current task’s stack pointer are saved. The system changes to the kernel’s stack 
@@ -291,6 +305,7 @@ the context and the stack pointer are restored.
 
 void Service_Publish( SERVICE *s, int16_t v )
 .............................................
+
 Takes a pointer to a service and a value. The method sets the kernel_request to 
 SERVICE_PUBLISH and enters the kernel. Once in the kernel, the context and the 
 current task’s stack pointer are saved. The system changes to the kernel’s stack 
