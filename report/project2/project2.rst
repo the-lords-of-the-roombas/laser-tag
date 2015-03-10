@@ -726,3 +726,57 @@ Publishing makes the publisher yield to the subscriber, which in turn proceeds
 to publish over another channel. In order to ensure that one task is indeed
 subscribed to the service to which the other one publishes, each task yields
 additionally before publishing.
+
+In addition, after subscribing, each task works for as many milliseconds as the
+value it receives over a service, increments that value and wraps it to
+the range of 1 to 5, and publishes the result over the other service.
+The amount of time each task works is indicated on the trace channels 4 and 5,
+respectively. The trace confirms correct passing of values over the services.
+
+Service: unicast
+----------------
+
+- `Code <https://github.com/the-lords-of-the-roombas/laser-tag/blob/master/project2/rtos/test/test_service_unicast.cpp>`__
+- `Trace <traces/trace-service-unicast.png>`__
+
+This test verifies one-to-many communication over multiple services, one
+for each pair of communicating tasks.
+
+The main task creates 3 services and three other system tasks. Each
+task repeatedly subscribes to one of the services, and then works for
+as many milliseconds as the value received over the service. The main task
+repeatedly publishes a different value (1, 2, or 3) to each of the services.
+To ensure that all subscribers are indeed subscribed at the time of publishing,
+it yields before publishing.
+
+Each subscriber keeps one of the trace channels 5, 6, and 7 high as long
+as it is running. Moreover, the main task keeps the trace channel 4 high while
+publishing to the three services. The trace indicates correct transmission
+of values over the services, and expected order of execution of tasks
+(the subscribers run in the order of publishing to their respective services).
+
+Service: broadcast
+------------------
+
+- `Code <https://github.com/the-lords-of-the-roombas/laser-tag/blob/master/project2/rtos/test/test_service_broadcast.cpp>`__
+- `Trace <traces/trace-service-broadcast.png>`__
+
+This test verifies one-to-many communication over a single service.
+
+The main task creates 1 service and three other system tasks. Each
+task repeatedly subscribes to the single service, and then works for
+as many milliseconds as the value received over the service. The main task
+repeatedly publishes a different value (1, 2, or 3) to the service.
+To ensure that all subscribers are indeed subscribed at the time of publishing,
+it yields before publishing.
+
+Each subscriber keeps one of the trace channels 5, 6, and 7 high as long
+as it is running. Moreover, the main task keeps the trace channel 4 high while
+publishing to the service. The trace indicates correct transmission
+of values over the services, and expected order of execution of tasks.
+The subscribers run in the order of their subscription, which is the same
+as the order of their creation, due to their execution order when the main
+task first yields.
+
+
+
