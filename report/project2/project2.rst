@@ -704,3 +704,10 @@ Service: bi-directional communication using two services
 
 This test confirms that two system tasks can communicate back and forth
 using two services.
+
+The main task creates two services and two other system tasks. Each
+task repeatedly publishes on one service and subscribes to the other.
+Publishing makes the publisher yield to the subscriber, which in turn proceeds
+to publish over another channel. In order to ensure that one task is indeed
+subscribed to the service to which the other one publishes, each task yields
+additionally before publishing.
