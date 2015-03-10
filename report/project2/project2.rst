@@ -345,4 +345,362 @@ The main task creates 3 system tasks. Each one indicates its operation by
 switching a trace channel high, working for some time, and switching it back
 low; each one operates on a different trace channel (4, 5, or 6) and
 does a different amount of work (1, 2, or 3 ms), which allows identification
-of the tasks. After that, a task switches the trace channel 7 high.
+of the tasks.
+
+After doing some work, a task switches the trace channel 7 high, yields,
+and then switches the channel back low. Because a different task starts
+running as soon as one yields, the trace channel will be switched high by
+the yielding task and then low by the task that gets to run next. We can
+thus measures the task switching time between consecutive rising and falling
+edges of the trace channel 7.
+The average of 6 measurements is 38.92 microseconds.
+
+Periodic task creation
+----------------------
+
+- `Code <https://github.com/the-lords-of-the-roombas/laser-tag/blob/master/project2/rtos/test/test_periodic_create.cpp>`__
+- `Trace <traces/trace-periodic-create.png>`__
+
+This simple test just confirms that a periodic task is created, started
+at the specified time and run at a specified interval.
+
+The main task creates one periodic task.
+Before starting the periodic schedule, the main task works for 8 ms.
+The periodic schedule starts at the next tick, which is at 10 ms.
+
+The periodic task starts at 0 ticks, it has a period of 1 tick and WCET of
+1 tick. It keeps the trace channel 5 high while running. It works for
+1 ms before yielding, which is within its WCET.
+
+Moreover, the main task swithes the trace channel 4
+high just before and low just after the periodic task creation,
+allowing to measure the task creation time. One measurement gave 48.584
+microseconds, which is not significantly different from the system task
+creation. This is expected, as the code path is very similar.
+
+Periodic task scheduling
+------------------------
+
+- `Code <https://github.com/the-lords-of-the-roombas/laser-tag/blob/master/project2/rtos/test/test_periodic_schedule.cpp>`__
+- `Trace <traces/trace-periodic-schedule.png>`__
+
+The main task creates 3 periodic tasks:
+
+  1. Start = 0 ticks, Period = 2 ticks, WCET = 1 tick
+  2. Start = 1 ticks, Period = 4 ticks, WCET = 1 tick
+  3. Start = 3 ticks, Period = 4 ticks, WCET = 1 tick
+
+It then works for 4 ms before starting the periodic schedule. The schedule
+will thus start at the next tick, which is at 5 ms.
+
+Each periodic task keeps a different trace channel high while running (channel
+4, 5, or 6), and works for 1 ms before yielding. This verifies that the task
+code actually runs. It also allows to measure when a task first runs,
+and the time difference between two onsets of a task.
+The measured onset times correspond to the requested periodic schedule.
+
+Invalid periodic schedule
+-------------------------
+
+- `Code <https://github.com/the-lords-of-the-roombas/laser-tag/blob/master/project2/rtos/test/test_periodic_schedule_overlap.cpp>`__
+- `Trace <traces/trace-periodic-schedule-overlap.png>`__
+
+This test confirms that the OS aborts when trying to run an invalid periodic
+task schedule.
+
+The main function creates three periodic tasks:
+
+  1. Start = 0 ticks, Period = 2 ticks, WCET = 1 tick
+  2. Start = 1 ticks, Period = 4 ticks, WCET = 3 tick
+  3. Start = 3 ticks, Period = 4 ticks, WCET = 1 tick
+
+The second task has WCET 3 ticks, which makes it overlap with the first task.
+For example, first execution of the second task starts at 1 tick and may
+run until 1 + 3 = 4th tick. However, the second execution of the first task
+starts at 2 ticks.
+
+The OS aborts at the moment the offending task (the second task) is about to
+run, which is at 1 tick. Since the periodic schedule starts at 10 ms, the
+OS aborts at 15 ms.
+
+Periodic task takes too long
+----------------------------
+
+- `Code <https://github.com/the-lords-of-the-roombas/laser-tag/blob/master/project2/rtos/test/test_periodic_task_timeout.cpp>`__
+- `Trace <traces/trace-periodic-task-timeout.png>`__
+
+This test confirms that the OS aborts when a task does not yield within
+its WCET.
+
+The main task creates 2 periodic tasks:
+
+  1. Start = 0 ticks, Period = 5 ticks, WCET = 1 tick
+  2. Start = 1 ticks, Period = 5 ticks, WCET = 1 tick
+
+The second task never yields. The OS aborts at the moment when the offending
+task first reaches its WCET, which is at 2 ticks. Because the periodic
+schedule starts at 10 ms, the OS aborts at 20 ms.
+
+Periodic task preemption
+------------------------
+
+- `Code <https://github.com/the-lords-of-the-roombas/laser-tag/blob/master/project2/rtos/test/test_periodic_preempt.cpp>`__
+- `Trace <traces/trace-periodic-preempt.png>`__
+
+This test confirms:
+
+  - System tasks preempt periodic tasks.
+  - Allowed running time of periodic tasks is extended beyond their WCET
+    by the duration that they are being preempted.
+  - None of this affects inter-onset time of periodic tasks.
+
+The main task creates a periodic task which starts at 1 tick, has a period
+of 5 ticks and WCET of 1 tick.
+
+The periodic task repeatedly creates a
+system task and then yields. It sets the trace channel 4 high just
+before creation of the system task and low just after that.
+
+The system
+task sets the trace channel 5 high, works for 10 ms (2 ticks), sets the trace
+channel low, and then terminates.
+
+By observing the trace channels 4 and 5, we deduce that the periodic task is
+preempted by the system task as soon as the system task is created, and the
+system task runs to completion before the periodic task resumes. This means
+that it will take at least 10 ms (2 ticks) before the periodic task yields,
+which is longer than its WCET (1 tick). However, the OS does not abort, which
+means the allowed runnning time of the periodic task is successfully extended
+beyond its WCET while it is being preempted.
+
+The trace also confirms that the inter-onset time of the periodic task is
+unaffected (5 ticks = 25 ms).
+
+Periodic task preemption too long
+---------------------------------
+
+- `Code <https://github.com/the-lords-of-the-roombas/laser-tag/blob/master/project2/rtos/test/test_periodic_preempt_timeout.cpp>`__
+- `Trace <traces/trace-periodic-preempt-timeout.png>`__
+
+This test confirms that the OS aborts when preemption of a periodic task
+extends its running time beyond the next onset of a periodic task.
+
+The main task creates 2 periodic tasks:
+
+  1. Start = 0 ticks, Period = 5 ticks, WCET = 1 tick
+  2. Start = 1 ticks, Period = 5 ticks, WCET = 1 tick
+
+The first periodic task creates a system task which preempts it for longer
+than its WCET, thus running over the onset of the second task. The OS
+aborts when the second task is first about to run - that is at 1 tick
+plus the 5 ms offset of the periodic schedule start = 10 ms.
+
+Round-robin task creation
+-------------------------
+
+- `Code <https://github.com/the-lords-of-the-roombas/laser-tag/blob/master/project2/rtos/test/test_rr_create.cpp>`__
+- `Trace <traces/trace-rr-create.png>`__
+
+This simple test confirms that round-robin tasks are created successfully.
+
+The main task creates a round-robin task which starts running after the
+main task completes its 10 ms of work. The round-robin task switches
+the trace channel 5 between high and low every 2 ms.
+
+Moreover, the main task switches the trace channel 4 high just before
+creation of the round-robin task, and low just after that, which allows
+to measure the task creation time. One measurement gave 48.416 microseconds,
+comparable to creation of other tasks, as expected.
+
+Round-robin task interleaving
+-----------------------------
+
+- `Code <https://github.com/the-lords-of-the-roombas/laser-tag/blob/master/project2/rtos/test/test_rr_interleave.cpp>`__
+- `Trace <traces/trace-rr-interleave.png>`__
+
+This test confirms that round-robin tasks are interleaved in the order of
+their creation, each one running for 1 tick.
+
+The main task creates 4 round-robin tasks, works for 10 ms and then terminates,
+at which point the first round-robin task runs.
+
+Each round-robin task indicates operation by switching a different trace channel
+(4, 5, 6, or 7). Repeatedly, the channel is switched between high and low
+every 23 ms.
+
+We can observe from the first 4 trace channels that tasks are indeed being
+switched every single tick (5ms). Moreover, the last 4 trace channels indicate
+that all the tasks progress at the same speed, completing each of their
+23 ms work periods at the same time. Because they are interleaved, this
+time is extended to about 4 times 23 ms = 92 ms (a bit shorter because
+of different starting times).
+
+Round-robin task preemption
+---------------------------
+
+- `Code <https://github.com/the-lords-of-the-roombas/laser-tag/blob/master/project2/rtos/test/test_rr_preempt.cpp>`__
+- `Trace <traces/trace-rr-preempt.png>`__
+
+This test confirms that round-robin tasks are preempted both by system and
+periodic tasks.
+
+The main task creates a round-robin task and a periodic task, and then
+terminates.
+
+The round-robin task repeatedly works for 20 ms and then creates a system
+task, switching the trace channel 4 high and low just before and after
+the system task creation.
+
+The system task switches the trace channel 5 high, works for 1 ms, and then
+switches the trace channel back low.
+
+The periodic task runs every 1 tick (5 ms). At each run, it switches the
+trace channel 6 high, works for 1 ms, and switches the trace channel back
+to low.
+
+By comparing the trace channel 0 (which shows when the periodic task is
+being selected as the current kernel task) with other channels, we can
+observe that the round-robin task is being preempted by both other types of
+tasks.
+Moreover, the trace also shows a case where an occurrence of a
+system task overlaps with a scheduled occurence of the periodic task, displacing
+the execution of the periodic task forwad in time. This results in an
+increase of the periodic task's inter-onset time from 5 ms to 5.8 ms, and
+preemption of the round-robin task for 2 ms instead of 1 ms.
+
+
+System clock
+------------
+
+- `Code <https://github.com/the-lords-of-the-roombas/laser-tag/blob/master/project2/rtos/test/test_time.cpp>`__
+- `Trace <traces/trace-time.png>`__
+
+This test confirms that the system clock works correctly - that is, the
+function ``Now`` returns the time in milliseconds since start of OS.
+
+The main function repeatedly picks one of the 4 different durations (3, 6, 9,
+or 12 milliseconds). Each time, it queries the OS time, works for the
+desired duration, and queries the OS time again. Then it computes the
+difference between the reported time measurements and works for the
+computed amount of time.
+
+The trace channel 4 is switched high just before and low just after the two
+time queries, and the channel 5 is switched high just before and low just after
+the work period corresponding to the measured time. This way it is possible
+to measure and compare the actual measured duration with the duration
+reported by the OS. The trace confirms that they match.
+
+Note that the
+slight differences are due to the unavoidable imperfection of the duration of
+the ``_delay_ms`` function, the overhead of switching pins high and low
+and of the called functions, and the hardware's smallest quantum of time - the
+duration of a single CPU cycle.
+
+Services: communication between system tasks
+--------------------------------------------
+
+- `Code <https://github.com/the-lords-of-the-roombas/laser-tag/blob/master/project2/rtos/test/test_service_system_to_system.cpp>`__
+- `Trace <traces/trace-service-system-to-system.png>`__
+
+This test confirms the basic operation of services: one system task
+publishes over a service to another system task.
+
+The main task creates a service and a system task that will publish over
+the service.
+The publisher repeatedly picks a number between 5 and 1 and publishes it
+over the service. The main task repeatedly subscribes to the service and then
+works for as many milliseconds as the number received over the service.
+The main task sets the trace channel 5 high just before the work and low just
+after that. Measuring the work times confirms that the correct values are passed
+over the service.
+
+Moreover, the publisher sets the trace channel 4 high just before publishing,
+and the main task sets it low just after subscribing. This way we can measure
+the time it takes to switch from the publisher to the subscriber. Three
+measurements gave an average of 47.66 microseconds.
+
+Services: periodic task to system task
+--------------------------------------
+
+- `Code <https://github.com/the-lords-of-the-roombas/laser-tag/blob/master/project2/rtos/test/test_service_periodic_to_system.cpp>`__
+- `Trace <traces/trace-service-periodic-to-system.png>`__
+
+This test confirms that communication over a service from a periodic to
+a system task works, and that the periodic task is preempted as soon as
+it publishes.
+
+The main task creates a service and a periodic task with a 1 tick period.
+In each period, the periodic task publishes to the service and then works
+for 1 ms. It sets the trace channel 5 high before publishing and low after
+the end of work. Moreover, it sets the trace channel 4 high before publishing.
+The main task repeatedly subscribes to the service and then sets the trace
+channel 4 to low.
+
+The trace confirms the assumption that the system task preempts the
+periodic task as soon as the latter publishes while the former is subscribed
+(the trace channel 4 becomes low before the channel 5).
+
+Moreover, the duration
+that the trace channel stays high is the time it takes to switch between the
+tasks. The average of 8 measurements is 45.54 microseconds.
+
+Service: round-robin task to system task
+----------------------------------------
+
+- `Code <https://github.com/the-lords-of-the-roombas/laser-tag/blob/master/project2/rtos/test/test_service_rr_to_system.cpp>`__
+- `Trace <traces/trace-service-rr-to-system.png>`__
+
+This test is very similar to the one above. The trace confirms preemption
+of the round-robin task by the system task as soon as the former publishes
+when the latter is subscribed. The average task switching time of 6
+measurements is 47.23 microseconds, comparable to the other two.
+
+Service: interrupt to system task
+---------------------------------
+
+- `Code <https://github.com/the-lords-of-the-roombas/laser-tag/blob/master/project2/rtos/test/test_service_isr_to_system.cpp>`__
+- `Trace <traces/trace-service-isr-to-system.png>`__
+
+This test confirm success of communication over a service between an
+interrupt service routine (ISR) and a system task.
+
+The main task creates a service and sets up a hardware timer to trigger
+an interrupt every 10 ms. The ISR publishes over the service one value
+between 1 and 5. The main task repeatedly subscribes to the service and
+the works for as many milliseconds as the value received over the service.
+
+The trace channel 4 confirms the desired period between interrupts.
+The trace channel 5 confirms that the value is transmitted successfully.
+
+Service: interrupt to round-robin task
+--------------------------------------
+
+- `Code <https://github.com/the-lords-of-the-roombas/laser-tag/blob/master/project2/rtos/test/test_service_isr_to_rr.cpp>`__
+- `Trace <traces/trace-service-isr-to-rr.png>`__
+
+This test is very similar to the one above. Visual inspection of the code
+and the trace confirms correct operation. No difference from the above
+test is neither expected, nor observed.
+
+Service: invalid subscription from periodic task
+------------------------------------------------
+
+- `Code <https://github.com/the-lords-of-the-roombas/laser-tag/blob/master/project2/rtos/test/test_service_to_periodic.cpp>`__
+- `Trace <traces/trace-service-to-periodic.png>`__
+
+According to the specification for the RTOS, it is not allowed for a
+periodic task to subscribe to a service, and the OS should abort in this
+case.
+
+In this test, the main function creates a periodic task that starts at
+3 ticks plus the time before the start of schedule (1 tick), which is in
+total 4 ticks (20 ms). The trace confirms that the OS aborts at that time.
+
+Service: bi-directional communication using two services
+--------------------------------------------------------
+
+- `Code <https://github.com/the-lords-of-the-roombas/laser-tag/blob/master/project2/rtos/test/test_service_ping_pong.cpp>`__
+- `Trace <traces/trace-service-ping-pong.png>`__
+
+This test confirms that two system tasks can communicate back and forth
+using two services.
