@@ -347,14 +347,26 @@ argument 1, so the first two pins in the range are reserved for these two
 tasks.
 
 The logic analyzer has only 8 channels, so we had to compromise with
-what we can trace. We decided to use 4 channels for kernel
-tracing, and the other 4 for test code tracing. Hence, we connected the Arduino
-digital pins 4 to 7 to channel 0 to 3 of the analyzer, and Arduino
-pins 8 to 11 to channel 4 to 7 of the analyzer. The former were used
-to trace switching of tasks created by the test code, so we didn't trace the
-idle and the main task. The latter were used for arbitrary purposes of the test
-code.
+what we can trace. We decided to use 4 channels (0-3) to trace kernel
+task-switching (ignoring the idle and the main task), and the other 4
+channels (4-7) for test-specific tracing with output on Arduino pins 8-11.
 
+This is the overview of the mapping:
+
+======================  ===================   ======================
+Task Creation Argument  Arduino Digital Pin   Logic Analyzer Channel
+======================  ===================   ======================
+0 (Idle)                2
+1 (Main)                3
+2                       4                     0
+3                       5                     1
+4                       6                     2
+5                       7                     3
+                        8                     4
+                        9                     5
+                        10                    6
+                        11                    7
+======================  ===================   =======================
 
 Main
 ----
