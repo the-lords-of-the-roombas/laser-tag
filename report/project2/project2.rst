@@ -262,10 +262,13 @@ by the following function::
 
 A simple solution would be to return the number of system clock ticks times
 the duration of a tick, but that would obviously limit the resolution.
+
 A better but still economic solution uses the same hardware timer used by the
 system clock: it converts the timer counter value since the
 last system clock tick to milliseconds and adds that to the current system
 clock tick converted to milliseconds.
+This way, we retain the precision of the underlying timer counter
+(1/8 of CPU clock frequency), with maximum resolution (1 ms).
 
 Inter-process communication (services)
 --------------------------------------
@@ -368,13 +371,16 @@ Task Creation Argument  Arduino Digital Pin   Logic Analyzer Channel
                         11                    7
 ======================  ===================   =======================
 
+What follows are descriptions of each test,
+with links to code and trace plots.
+
 Main
 ----
 
 - `Code <https://github.com/the-lords-of-the-roombas/laser-tag/blob/master/project2/rtos/test/test_main.cpp>`__
 - `Trace <traces/trace-main.png>`__
 
-This is the basic sanity test the confirms that the application's main function
+This is the basic sanity test confirming that the application's main function
 ``r_main`` is called at system startup as the main task.
 
 The main function switches the trace channel 4 between high and low every 5 ms.
@@ -828,5 +834,45 @@ The subscribers run in the order of their subscription, which is the same
 as the order of their creation, due to their execution order when the main
 task first yields.
 
+Conclusion
+**********
 
+The provided RTOS code has been successfully **adjusted for Extended Addressing**
+of ATMega2560 program memory above 128K bytes.
 
+The new **task creation interface** has been succesfully implemented.
+
+A new **periodic scheduling** mechanism has been implemented **efficiently**,
+with the worst running time of any operation in O(N), and only with the use of
+simple mathematical operations such as addition and comparison for equality.
+The mechanism is not hindered at all by **system clock overflow**. We proposed and
+implemented an additional function that defines the **periodic schedule start**
+time, improving intelligibility, robustness and maintainability of application
+code. **Critical conditions** related to periodic scheduling were identified and
+handled by aborting the system and reporting appropriate errors.
+
+The **service API** has been implemented successfully and **efficiently**, with
+the worst running time of any operation in O(N), where N is only
+the number of subscribers to a service. **Preemption** of publishers by
+higher-priority subscribers has been ensured, and a simple and
+consistent publisher **re-enqueing** scheme has been designed.
+
+The **system clock API** that reports milliseconds since system start has been
+implemented with high **precision** (1/8 of the CPU clock frequency)
+and maximum **resolution** (1 ms).
+
+The behavior of the RTOS has been extensively **tested and profiled** by tracing
+the operation of a large number of test applications. All tests confirmed
+**correct behavior**.
+
+The following **time measurements** are of interest:
+
+- Average task creation time: ~ 48.5 microseconds.
+- Average task-switching time by yielding: ~ 39 microseconds.
+- Average task-switching time between a service publisher and a subscriber:
+  ~ 47 microseconds.
+
+We can conclude from this and the known time complexities of kernel operations
+that the maximum time spent in the kernel by any operation is probably
+**upper-bounded by 50 microseconds**. This time is important because it is the
+maximum time that the system does not respond to interrupts.
