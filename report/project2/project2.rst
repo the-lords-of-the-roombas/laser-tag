@@ -318,6 +318,32 @@ the stack pointer are restored.
 3. Testing and profiling
 ************************
 
+We decided to trace and profile testing code by using a logic analyzer
+to record state of digital output pins manipulated by the kernel code
+and the test code.
+
+We inserted optionally-compiled code into the kernel that assigns a
+digital output pin to each task, and switches it high when the task is
+selected to run, and low when a different task is selected. Each task is
+assigned an Arduino digital pin designated by the task's creation argument.
+This way test code can decide assignment of pins.
+
+We decided to use the pins 2 to 7 for the purpose of kernel tracing.
+A task is assigned a pin number equal to its creation argument plus 2. The
+idle task is created with argument 0, and the main task is created with
+argument 1, so the first two pins in the range are reserved for these two
+tasks.
+
+The logic analyzer has only 8 channels, so we had to compromise with
+what we can trace. We decided to use 4 channels for kernel
+tracing, and the other 4 for test code tracing. Hence, we connected the Arduino
+digital pins 4 to 7 to channel 0 to 3 of the analyzer, and Arduino
+pins 8 to 11 to channel 4 to 7 of the analyzer. The former were used
+to trace switching of tasks created by the test code, so we didn't trace the
+idle and the main task. The latter were used for arbitrary purposes of the test
+code.
+
+
 Main
 ----
 
