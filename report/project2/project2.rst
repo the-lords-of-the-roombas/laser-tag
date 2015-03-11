@@ -959,10 +959,10 @@ The following **time measurements** are of interest:
 - Periodic task selection time: ~ 2.9 microseconds times the number of periodic tasks.
 - Service publishing time: ~ 7.3 microseconds times the number of subscribers.
 
-We can conclude from this that the base time required to switch context
-into and out of the kernel is about 30 microseconds. The operations in O(1),
+We can estimate from this that the base time required to switch context into and
+out of the kernel is somewhere below 40 microseconds. The operations in O(1),
 such as task creation and yielding will never take much more than this time.
-There are other operations in O(N), like selecting the next periodic task to
-run, or publishing over a service, with a linear time dependence on the number
-of tasks (or service subscribers). The time spent in the kernel is important
-because it is the maximum time that the system does not respond to interrupts.
+Other operations in O(N) like selecting the next periodic task to run, or
+publishing over a service, have a linear time increase in dependence on the
+number of tasks involved. The time spent in the kernel is important because it
+is the maximum time that the system does not respond to interrupts.
