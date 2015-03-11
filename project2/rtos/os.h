@@ -181,7 +181,7 @@ extern "C" {
 /* limits */
 
 /** max. number of processes supported */  
-#define MAXPROCESS		8   
+#define MAXPROCESS		12
 
 /** time resolution */
 #define TICK			    5     // resolution of system clock in milliseconds
