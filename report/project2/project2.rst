@@ -565,6 +565,53 @@ than its WCET, thus running over the onset of the second task. The OS
 aborts when the second task is first about to run - that is at 1 tick
 plus the 5 ms offset of the periodic schedule start = 10 ms.
 
+Periodic Task Selection Time
+----------------------------
+
+- `Code <https://github.com/the-lords-of-the-roombas/laser-tag/blob/master/project2/rtos/test/test_periodic_select_time.cpp>`__
+- `Trace <traces/trace-periodic-select-time.png>`__
+
+This test is designed for measurement of next earliest periodic task
+selection time, in relation to the number of periodic tasks.
+The task selection time is an O(N) algorithm, where N is the number of
+periodic tasks. Hence, we expect a linear time increase with the number
+of tasks.
+
+The main task creates **n** number of periodic tasks, each with the same
+period, but offset by 1 tick in relation to the previous one.
+
+To measure the task selection time, the tracing output had to be adjusted
+in comparison to other tests. The OS kernel was modified to set a trace
+channel high whenever exiting from the kernel into a task, and low when
+entering from a task. The mapping between task creation arguments and
+Arduino pins remained the same. However, we adjusted the mapping of Arduino
+pins to trace channels, so that we had the idle task on channel 0 and the
+task with argument 2 on channel 1. We measured the time between entering
+the kernel from the idle task (due to the system clock timer interrupt), and
+exiting into a selected periodic task.
+
+We found out that the time measurement also depends on the index of the
+task within the schedule (this affects computation of the smallest of the
+distances to the next occurences of each task). We decided to always
+measure the case which results in the largest measured duration. We
+computed the average of 5 such measurements for each case of
+1, 3, 5, 7, and 10 periodic tasks. The durations in the table below
+are in microseconds:
+
+===============================================
+Number of tasks:   1     3     5     7    10
+================= ==    ==    ==    ==    ==
+Duration (us):    28.90 34.67 40.38 46.17 54.75
+===============================================
+
+The trace shows an example measurement for a run with 10 tasks.
+
+The plot below clearly confirms a linear increase.
+The increase is about **6.08 microseconds per task**.
+
+.. image:: plots/periodic-task-selection.svg
+
+
 Round-robin task creation
 -------------------------
 
