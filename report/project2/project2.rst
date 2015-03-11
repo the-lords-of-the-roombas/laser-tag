@@ -603,7 +603,7 @@ Number of tasks:   1     3     5     7    10
 Duration (us):    28.90 34.67 40.38 46.17 54.75
 ===============================================
 
-This `trace <traces/trace-periodic-select-time.png>`
+This `trace <traces/trace-periodic-select-time-10.png>`__
 shows an example measurement for a run with 10 tasks.
 
 The plot below clearly confirms a linear increase.
