@@ -840,8 +840,6 @@ static void kernel_service_subscribe()
 
 static void kernel_service_publish()
 {
-    bool had_subscribers = requested_service->subscribers.head;
-
     while(requested_service->subscribers.head)
     {
         task_descriptor_t *subscriber =
@@ -851,10 +849,7 @@ static void kernel_service_publish()
     }
 
     // Pre-empt current task
-    if (had_subscribers)
-    {
-        kernel_enqueue_task(cur_task);
-    }
+    kernel_enqueue_task(cur_task);
 }
 
 /*
