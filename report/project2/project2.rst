@@ -569,7 +569,6 @@ Periodic Task Selection Time
 ----------------------------
 
 - `Code <https://github.com/the-lords-of-the-roombas/laser-tag/blob/master/project2/rtos/test/test_periodic_select_time.cpp>`__
-- `Trace <traces/trace-periodic-select-time.png>`__
 
 This test is designed for measurement of next earliest periodic task
 selection time, in relation to the number of periodic tasks.
@@ -604,10 +603,11 @@ Number of tasks:   1     3     5     7    10
 Duration (us):    28.90 34.67 40.38 46.17 54.75
 ===============================================
 
-The trace shows an example measurement for a run with 10 tasks.
+This `trace <traces/trace-periodic-select-time.png>`
+shows an example measurement for a run with 10 tasks.
 
 The plot below clearly confirms a linear increase.
-The increase is about **6.08 microseconds per task**.
+The increase is about **2.87 microseconds per task**.
 
 .. image:: plots/periodic-task-selection.svg
 
@@ -880,6 +880,44 @@ The subscribers run in the order of their subscription, which is the same
 as the order of their creation, due to their execution order when the main
 task first yields.
 
+Service: publish time
+---------------------
+
+- `Code <https://github.com/the-lords-of-the-roombas/laser-tag/blob/master/project2/rtos/test/test_service_publish_time.cpp>`__
+- `Trace <traces/trace-service-publish-time.png>`__
+
+This test is designed for measurement of the time spent in kernel
+when calling ``Service_Publish``, until the first subscriber runs.
+Waking up all subscribers is obviously an O(N) algorithm, where N is
+the number of subscribers. Hence, we expect a linear time increase with the
+number of subscribers.
+
+The main task creates a service, and a system task which subscribes to
+the service. It then brings the trace channel 8 high and publishes to the
+service. The subscriber brings the trace channel 8 low immediately after
+subscribing. This is repeated 5 times.
+The main task than adds another subscribing task, and repeats the whole
+procedure, until having published 5 times to 10 subscribers.
+The trace shows the first couple of repetitions (for 1 to 4 subscribers).
+
+We measured the amount of time the trace channel 8 is high, resulting in
+5 measurements for each number of subscribers, which were averaged to
+produce the following data (the durations are in microseconds):
+
+======================================================================================
+Number of subscribers: 1      2     3     4    5      6     7     8     9       10
+====================== =      =     =     =    =      =     =     =     =       =
+Duration (us):         47.03  54.30 61.53 68.80 76.05 88.99 96.21 97.81 105.10  112.30
+======================================================================================
+
+The plot below clearly confirms a linear increase.
+The increase is about **7.25 microseconds per task**.
+
+.. image:: plots/service-publish.svg
+
+
+
+
 Conclusion
 **********
 
@@ -918,6 +956,8 @@ The following **time measurements** are of interest:
 - Average task-switching time by yielding: ~ 39 microseconds.
 - Average task-switching time between a service publisher and a subscriber:
   ~ 47 microseconds.
+- Periodic task selection time: ~ 2.9 microseconds times the number of periodic tasks.
+- Service publishing time: ~ 7.3 microseconds times the number of subscribers.
 
 We can conclude from this that the base time required to switch context
 into and out of the kernel is about 30 microseconds. The operations in O(1),
