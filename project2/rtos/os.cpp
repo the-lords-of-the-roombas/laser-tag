@@ -382,8 +382,8 @@ static void kernel_handle_request(void)
  * the rest of the registers on the stack. In the locations this macro
  * is used, the interrupts need to be disabled, or they already are disabled.
 
- Extended addressing:
- We also need to (re)store the EIND register (0x3C).
+   Extended addressing:
+   We also need to (re)store the EIND register (0x3C).
  */
 #define    SAVE_CTX_TOP()       asm volatile (\
     "push   r31             \n\t"\
@@ -435,7 +435,7 @@ static void kernel_handle_request(void)
 #define    SAVE_CTX()    SAVE_CTX_TOP();SAVE_CTX_BOTTOM();
 
 /**
- * @brief Pop all registers and the status register.
+ * @brief Pop all registers from the stack, including SREG and EIND.
  */
 #define    RESTORE_CTX()    asm volatile (\
     "pop    r0                \n\t"\
@@ -703,20 +703,17 @@ static int kernel_create_task()
 
 
     /*
-      The stack grows down in memory, so the stack pointer is going to end up
-      pointing to the location 32 + 1 + 1 + 3 + 3 = 40 bytes above the bottom,
-      to make room for (from bottom to top):
-      - the address of Task_Terminate() to destroy the task if it ever returns,
-      - the address of the start of the task to "return" to the first time it runs,
-      - register 31,
-      - SREG
-      - EIND
-      - registers 30 to 0.
+      The stack must look like this (from top to bottom):
+      - (1 byte each = 31 bytes) registers 30 to 0.
+      - (1 byte) EIND
+      - (1 byte) SREG
+      - (1 byte) register 31,
+      - (3 bytes) the address of Task_Terminate() to destroy the task if it ever returns,
+      - (3 bytes) the address of the start of the task to "return" to the first time it runs,
+      This is 40 bytes in total.
+      The stack grows down in memory, so the top will be 40 bytes below the bottom:
     */
-    uint8_t* stack_top = stack_bottom - (32 + 1 + 1 + 3 + 3);
-
-    /* Not necessary to clear the task descriptor. */
-    /* memset(p,0,sizeof(task_descriptor_t)); */
+    uint8_t* stack_top = stack_bottom - 40;
 
     // 0 = above top of stack
     // 1 = r0
@@ -748,8 +745,7 @@ static int kernel_create_task()
     stack_top[40] = (uint8_t)(uint16_t)Task_Terminate;
 
     /*
-     * Make stack pointer point to cell above stack (the top).
-     * Make room for 32 registers, SREG and two return addresses.
+     * Store top of stack into the task descriptor
      */
     p->sp = stack_top;
 

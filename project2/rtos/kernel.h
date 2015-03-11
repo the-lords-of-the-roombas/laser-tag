@@ -128,6 +128,10 @@ typedef struct
 }
 queue_t;
 
+/**
+   @brief Represents a service (publish-subscribe communication channel)
+ */
+
 struct service
 {
     queue_t subscribers;
