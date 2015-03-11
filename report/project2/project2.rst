@@ -315,19 +315,18 @@ address provided to ``Service_Subscribe``.
 When **publishing**, the provided value is copied into the service structure.
 The kernel then moves all subscribers to their respective ready queues
 depending on type (system or round-robin). Finally, the publisher
-state goes from "running" to "ready", and it is placed last in its ready
-queue if not a periodic task.
-The common dispatch mechanism will then select the
-highest-priority front-of-queue ready task, which might still be the publisher
-itself.
+**yields**: it's state goes from "running" to "ready", and it is placed last in
+its ready queue if not a periodic task. The common dispatch mechanism will then
+select the highest-priority front-of-queue ready task, which might still be the
+publisher itself or another task.
 
-The decision to always **re-enqueue the publisher**, regardless of its priority
-level, is supported by the following reasoning. Lowest priority tasks
-must be preempted by highest priority tasks, but at the point of publishing
-it is not obvious to the user whether there exists a subscriber of highest
-priority than the publisher. To avoid uncertainty, we decided to always
-re-enqueue periodic and round-robin publishers. We then decided to always
-re-enqueue system publishers too, for consistency.
+The decision that **publishing always yields**, regardless of the publisher's
+priority level, is supported by the following reasoning. Lower priority tasks
+must obviously yield to higher priority tasks, but at the point of publishing it
+is not obvious to the user whether there exists a subscriber of higher priority
+than the publisher. To avoid uncertainty, we decided that
+periodic and round-robin publishers always yield. For consistency, we
+then applied the same rule to system publishers.
 
 
 3. Testing and profiling
@@ -854,8 +853,9 @@ handled by aborting the system and reporting appropriate errors.
 The **service API** has been implemented successfully and **efficiently**, with
 the worst running time of any operation in O(S), where S is
 the number of subscribers to a service. **Preemption** of publishers by
-higher-priority subscribers has been ensured, and a simple and
-consistent publisher **re-enqueing** scheme has been designed.
+higher-priority subscribers has been ensured, and attention has been paid
+to **predictabile behavior** with regard to yielding of publishers to other
+tasks of equal or higher priorty.
 
 The **system clock API** that reports milliseconds since system start has been
 implemented with high **precision** (1/8 of the CPU clock frequency)
