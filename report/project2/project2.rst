@@ -852,7 +852,7 @@ code. **Critical conditions** related to periodic scheduling were identified and
 handled by aborting the system and reporting appropriate errors.
 
 The **service API** has been implemented successfully and **efficiently**, with
-the worst running time of any operation in O(N), where N is only
+the worst running time of any operation in O(S), where S is
 the number of subscribers to a service. **Preemption** of publishers by
 higher-priority subscribers has been ensured, and a simple and
 consistent publisher **re-enqueing** scheme has been designed.
@@ -872,7 +872,10 @@ The following **time measurements** are of interest:
 - Average task-switching time between a service publisher and a subscriber:
   ~ 47 microseconds.
 
-We can conclude from this and the known time complexities of kernel operations
-that the maximum time spent in the kernel by any operation is probably
-**upper-bounded by 50 microseconds**. This time is important because it is the
-maximum time that the system does not respond to interrupts.
+We can conclude from this that the base time required to switch context
+into and out of the kernel is about 30 microseconds. The operations in O(1),
+such as task creation and yielding will never take much more than this time.
+There are other operations in O(N), like selecting the next periodic task to
+run, or publishing over a service, with a linear time dependence on the number
+of tasks (or service subscribers). The time spent in the kernel is important
+because it is the maximum time that the system does not respond to interrupts.
