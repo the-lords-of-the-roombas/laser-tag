@@ -6,18 +6,20 @@ Project 2
 
 Authors: Jakob Leben and Darren Prince
 
-Code: https://github.com/the-lords-of-the-roombas/laser-tag
+Code: https://github.com/the-lords-of-the-roombas/laser-tag/tree/master/project2/rtos
 
 Overview
 ********
 
 The main topic of this project is the real-time operating system (RTOS).
 We were provided a specification of an RTOS application programming interface
-in form of a C header file containing function declarations which we had to
+in form of a `C header file`__ containing function declarations which we had to
 implement for the Atmel ATMega2560 chip on an Arduino board.
-We were also provided a partial implementation of an older
+We were also provided a `partial implementation`__ of an older
 API and targeting a different Atmel chip, which we partially re-used.
 
+.. __: https://github.com/the-lords-of-the-roombas/laser-tag/blob/master/project2/rtos_template/os.h
+.. __: https://github.com/the-lords-of-the-roombas/laser-tag/tree/master/project2/rtos_template
 
 Objectives:
 
