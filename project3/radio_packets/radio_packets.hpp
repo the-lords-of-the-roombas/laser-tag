@@ -1,7 +1,7 @@
 #ifndef RADIO_PACKETS_INCLUDED
 #define RADIO_PACKETS_INCLUDED
 
-#include "radio_packets_global.hpp"
+#include "global.hpp"
 
 #include <stdint.h>
 
