@@ -116,7 +116,7 @@ function(avr_hex name out_var elf_file)
       -R .eeprom
       ${elf_file}
       ${out_file}
-    DEPENDS ${elf_file}
+    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${elf_file}
   )
 endfunction()
 
