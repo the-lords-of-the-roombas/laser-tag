@@ -1,0 +1,7 @@
+#ifndef RTOS_UTIL_INCLUDED
+#define RTOS_UTIL_INCLUDED
+
+#define SET_BIT(FIELD, BIT) (FIELD |= _BV(BIT))
+#define CLEAR_BIT(FIELD, BIT) (FIELD &= ~_BV(BIT))
+
+#endif // RTOS_UTIL_INCLUDED
