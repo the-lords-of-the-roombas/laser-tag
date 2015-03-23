@@ -46,6 +46,7 @@ add_subdirectory(rtos)
 
 set(src
   test.cpp
+  irobot/irobot.cpp
   radio/radio.c
   radio/spi.c
 )
