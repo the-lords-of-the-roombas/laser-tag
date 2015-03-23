@@ -21,6 +21,10 @@
 #include "error_code.h"
 #include "arduino_pins.h"
 
+#ifdef INIT_ARDUINO_LIB
+#include "Arduino.h"
+#endif
+
 /* Needed for memset */
 /* #include <string.h> */
 
@@ -1353,6 +1357,9 @@ uint16_t Now()
  */
 int main()
 {
-	OS_Init();
-	return 0;
+#ifdef INIT_ARDUINO_LIB
+    init();
+#endif
+    OS_Init();
+    return 0;
 }
