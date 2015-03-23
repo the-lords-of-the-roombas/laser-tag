@@ -23,96 +23,42 @@ void radio_test()
     Radio_Transmit(&packet, RADIO_WAIT_FOR_TX);
 }
 
-void init_robot_comm()
-{
-    pinMode(arduino::pin_baud_rate_change, OUTPUT);
-
-    // Wake up the robot.
-
-    digitalWrite(arduino::pin_baud_rate_change, LOW);
-    delay(100);
-    digitalWrite(arduino::pin_baud_rate_change, HIGH);
-    delay(2000);
-
-    // Blink
-
-    digitalWrite(13, HIGH);
-    _delay_ms(100);
-    digitalWrite(13, LOW);
-
-    // Change baud rate to 19200.
-
-    //digitalWrite(arduino::pin_baud_rate_change, HIGH);
-    for(int i = 0; i < 4; ++i)
-    {
-        _delay_ms(100);
-        digitalWrite(arduino::pin_baud_rate_change, LOW);
-        _delay_ms(100);
-        digitalWrite(arduino::pin_baud_rate_change, HIGH);
-    }
-
-    _delay_ms(100);
-
-    // Initialize Arduino Serial1
-
-    Serial1.begin(19200);
-
-    // Initiate conversation with the robot
-
-    Serial1.write(irobot::op_start);
-}
-
 int r_main()
 {
-#if 1
+
     pinMode(13, OUTPUT);
 
     Serial.begin(9600);
 
-    init_robot_comm();
+    irobot robot(&Serial1, arduino::pin_baud_rate_change);
+
+    robot.begin();
 
     while(true)
     {
         digitalWrite(13, HIGH);
-        _delay_ms(200);
+        _delay_ms(100);
         digitalWrite(13, LOW);
-        _delay_ms(200);
+        _delay_ms(100);
 
+        robot.flush_received();
 
-        Serial1.write(irobot::op_sensor);
-        Serial1.write(irobot::sense_charging);
-        //Serial1.write(irobot::sense_oi_mode);
+        robot.send(irobot::op_sensor, irobot::sense_infrared_omni);
 
-        unsigned long time = micros();
-
-        //_delay_ms(100);
-
-        //char response[2];
-        //char response;
-
-        while(!Serial1.available() && (micros() - time) < 1e5)
-            ;
-
-        unsigned long time_after = micros();
-
-        Serial.print("Time: ");
-        Serial.print(time_after - time);
-        Serial.print(" us");
-        Serial.println();
-
-        int b;
-        while((b = Serial1.read()) >= 0)
+        char response;
+        if(robot.receive(&response, 1))
         {
-            Serial.print("Response: ");
-            Serial.println(b);
+            if (response == 0)
+                Serial.print("No character.");
+            else
+            {
+                Serial.print("Character: ");
+                Serial.print(response);
+            }
+            Serial.println();
         }
-
-        Serial.println("Done.");
+        Serial.print("Done.");
     }
-
-#endif
-
-
 
     return 0;
 }
