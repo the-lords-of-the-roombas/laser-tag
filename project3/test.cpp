@@ -4,6 +4,8 @@
 #include "arduino_config.h"
 #include "Arduino.h"
 
+using namespace robot_tag_game;
+
 extern "C" {
 
 void radio_rxhandler(uint8_t pipenumber)
