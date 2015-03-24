@@ -1,7 +1,7 @@
 
 #set(CSTANDARD "-std=gnu99")
 #set(CDEBUG "-g")
-set(CWARN "-Wall")
+set(CWARN "-Wall -Wno-unused-function")
 set(CTUNING "-ffunction-sections -fdata-sections")
 set(CXXTUNING "-fno-exceptions -ffunction-sections -fdata-sections")
 set(COPT "-Os")
