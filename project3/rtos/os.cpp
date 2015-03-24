@@ -52,9 +52,16 @@ static task_descriptor_t task_desc[MAXPROCESS + 1];
 /** The special "idle task" at the end of the descriptors array. */
 static task_descriptor_t* idle_task = &task_desc[MAXPROCESS];
 
+// Services
+
 static volatile uint16_t service_count = 0;
-static struct service services[MAX_SERVICE_COUNT];
-static struct service * volatile requested_service = NULL;
+static Service services[MAX_SERVICE_COUNT];
+
+static volatile uint16_t service_subscription_count = 0;
+static ServiceSubscription service_subscriptions[MAX_SERVICE_SUBSCRIPTION_COUNT];
+
+static Service * volatile requested_service = NULL;
+static ServiceSubscription * volatile requested_service_subscription = NULL;
 
 /** The current kernel request. */
 static volatile kernel_request_t kernel_request;
@@ -107,6 +114,7 @@ static void kernel_enqueue_task(task_descriptor_t*);
 
 static void kernel_service_subscribe();
 static void kernel_service_publish();
+static void kernel_service_receive();
 
 /* queues */
 
@@ -364,6 +372,11 @@ static void kernel_handle_request(void)
     case SERVICE_PUBLISH:
     {
         kernel_service_publish();
+        break;
+    }
+    case SERVICE_RECEIVE:
+    {
+        kernel_service_receive();
         break;
     }
     default:
@@ -835,23 +848,43 @@ static void kernel_service_subscribe()
         kernel_abort_with(ERR_SERVICE_SUBSCRIBE);
     }
 
-    cur_task->state = WAITING;
+    Service *srv = requested_service;
+    ServiceSubscription *sub = requested_service_subscription;
 
-    enqueue(&requested_service->subscribers, cur_task);
+    sub->service = srv;
+    sub->next = srv->subscriptions;
+    srv->subscriptions = sub;
+
+    sub->subscriber = cur_task;
+    sub->waiting = false;
+    sub->unread = false;
 }
 
 static void kernel_service_publish()
 {
-    while(requested_service->subscribers.head)
-    {
-        task_descriptor_t *subscriber =
-                dequeue(&requested_service->subscribers);
+    ServiceSubscription *sub = requested_service->subscriptions;
 
-        kernel_enqueue_task(subscriber);
+    while(sub)
+    {
+        sub->unread = true;
+
+        if (sub->waiting)
+        {
+            kernel_enqueue_task(sub->subscriber);
+            sub->waiting = false;
+        }
+
+        sub = sub->next;
     }
 
     // Pre-empt current task
     kernel_enqueue_task(cur_task);
+}
+
+static void kernel_service_receive()
+{
+    requested_service_subscription->waiting = true;
+    cur_task->state = WAITING;
 }
 
 /*
@@ -1034,8 +1067,7 @@ void OS_Init()
 
     for (i = 0; i < MAX_SERVICE_COUNT; ++i)
     {
-        services[i].subscribers.head = NULL;
-        services[i].subscribers.tail = NULL;
+        services[i].subscriptions = NULL;
     }
 
 	/* Create idle "task" */
@@ -1296,9 +1328,9 @@ int Task_GetArg(void)
     return arg;
 }
 
-SERVICE *Service_Init()
+Service *Service_Init()
 {
-    SERVICE* service = NULL;
+    Service * service = NULL;
 
     uint8_t sreg = SREG;
     Disable_Interrupt();
@@ -1314,21 +1346,30 @@ SERVICE *Service_Init()
     return service;
 }
 
-void Service_Subscribe( SERVICE *s, int16_t *v )
+ServiceSubscription * Service_Subscribe( Service *s )
 {
+    ServiceSubscription *sub = 0;
+
     uint8_t sreg = SREG;
     Disable_Interrupt();
 
-    kernel_request = SERVICE_SUBSCRIBE;
-    requested_service = s;
-    enter_kernel();
+    if (service_subscription_count < MAX_SERVICE_SUBSCRIPTION_COUNT)
+    {
+        sub = &service_subscriptions[service_subscription_count];
+        ++service_subscription_count;
 
-    *v = s->value;
+        requested_service = s;
+        requested_service_subscription = sub;
+        kernel_request = SERVICE_SUBSCRIBE;
+        enter_kernel();
+    }
 
     SREG = sreg;
+
+    return sub;
 }
 
-void Service_Publish( SERVICE *s, int16_t v )
+void Service_Publish( Service *s, int16_t v )
 {
     uint8_t sreg = SREG;
     Disable_Interrupt();
@@ -1340,6 +1381,28 @@ void Service_Publish( SERVICE *s, int16_t v )
     enter_kernel();
 
     SREG = sreg;
+}
+
+int16_t Service_Receive(ServiceSubscription *sub)
+{
+    int16_t value;
+
+    uint8_t sreg = SREG;
+    Disable_Interrupt();
+
+    if (!sub->unread)
+    {
+        kernel_request = SERVICE_RECEIVE;
+        requested_service_subscription = sub;
+        enter_kernel();
+    }
+
+    value = sub->service->value;
+    sub->unread = false;
+
+    SREG = sreg;
+
+    return value;
 }
 
 uint16_t Now()

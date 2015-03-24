@@ -34,7 +34,8 @@ extern "C" {
 /** The number of clock cycles in one "tick" or 5 ms */
 #define TICK_CYCLES (CYCLES_PER_MS * TICK)
 
-#define MAX_SERVICE_COUNT 30
+#define MAX_SERVICE_COUNT 15
+#define MAX_SERVICE_SUBSCRIPTION_COUNT (MAX_SERVICE_COUNT * 3)
 
 /* Typedefs and data structures. */
 
@@ -65,7 +66,8 @@ typedef enum
     TASK_GET_ARG,
     TASK_PERIODIC_START,
     SERVICE_SUBSCRIBE,
-    SERVICE_PUBLISH
+    SERVICE_PUBLISH,
+    SERVICE_RECEIVE
 }
 kernel_request_t;
 
@@ -134,8 +136,17 @@ queue_t;
 
 struct service
 {
-    queue_t subscribers;
+    service_subscription *subscriptions;
     volatile int16_t value;
+};
+
+struct service_subscription
+{
+    struct service *service;
+    struct service_subscription *next;
+    task_descriptor_t *subscriber;
+    bool waiting;
+    volatile bool unread;
 };
 
 #ifdef __cplusplus
