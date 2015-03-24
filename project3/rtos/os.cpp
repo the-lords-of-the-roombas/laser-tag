@@ -242,7 +242,9 @@ static void kernel_dispatch(void)
      * kernel_handle_request() has already determined it should be selected.
      */
 
+#ifdef TRACE_TASKS
     task_descriptor_t *last_task = cur_task;
+#endif
 
     if(cur_task->state != RUNNING || cur_task == idle_task)
     {
@@ -1123,7 +1125,7 @@ static void kernel_assert(bool flag)
 void OS_Abort(void)
 {
     uint8_t i, j;
-    uint8_t flashes, mask;
+    uint8_t flashes;
 
     Disable_Interrupt();
 
