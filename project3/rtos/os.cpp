@@ -1076,11 +1076,17 @@ void OS_Init()
 #endif
 
     // Set up Timer 1 to count ticks...
+
+    // First, clear everything..
+    TIMSK1 = 0;
+    TCCR1A = 0;
+    TCCR1B = 0;
+
     // Use 1/8 prescaler
     TCCR1B |= (_BV(CS11));
     // Time out after 1 tick
     OCR1A = TCNT1 + TICK_CYCLES;
-    // Clear timeout flag
+    // Clear interrupt flag
     TIFR1 = _BV(OCF1A);
     // Enable interrupt
     TIMSK1 |= _BV(OCIE1A);
