@@ -9,6 +9,13 @@ public:
     gun();
     void init();
     void run();
+    void next_tick();
+private:
+    void send_lo();
+    void send_hi();
+    int current_bit_index;
+    int current_bit_phase;
+    char byte_to_send;
 };
 
 }

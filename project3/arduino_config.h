@@ -5,7 +5,8 @@ namespace robot_tag_game {
 namespace arduino {
 
 enum pins {
-    pin_baud_rate_change = 5
+    pin_baud_rate_change = 5,
+    pin_ir_emit = 3
 };
 
 }

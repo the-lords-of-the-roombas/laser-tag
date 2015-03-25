@@ -3,9 +3,12 @@
 #include "irobot/irobot.hpp"
 #include "arduino_config.h"
 #include "Arduino.h"
+#include "gun.hpp"
+
+
 
 using namespace robot_tag_game;
-
+gun g;
 extern "C" {
 
 void radio_rxhandler(uint8_t pipenumber)
@@ -32,17 +35,20 @@ int r_main()
 
     Serial.begin(9600);
 
-    irobot robot(&Serial1, arduino::pin_baud_rate_change);
+    //irobot robot(&Serial1, arduino::pin_baud_rate_change);
 
-    robot.begin();
+    //robot.begin();
 
+    g.init();
+
+/*
     while(true)
     {
         digitalWrite(13, HIGH);
         _delay_ms(100);
         digitalWrite(13, LOW);
         _delay_ms(100);
-
+	
         robot.flush_received();
 
         robot.send(irobot::op_sensor, irobot::sense_infrared_omni);
@@ -61,7 +67,7 @@ int r_main()
         }
         Serial.print("Done.");
     }
-
+*/
     return 0;
 }
 
