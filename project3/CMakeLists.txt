@@ -38,26 +38,7 @@ include_directories(${arduino_lib_dir} ${arduino_mega_lib_dir})
 
 add_library(arduino STATIC ${avr_lib_src_files} ${arduino_lib_src_files})
 
-## Compile RTOS
-
 add_subdirectory(rtos)
-
-## Compile app
-
-set(src
-  test.cpp
-  gun.cpp
-  irobot/irobot.cpp
-  radio/radio.c
-  radio/spi.c
-)
-
-add_executable(test ${src})
-target_link_libraries(test rtos arduino)
-
-set_property(TARGET test PROPERTY OUTPUT_NAME test.elf)
-
-## Make HEX
-
-avr_hex(test test_hex_file test.elf)
-add_custom_target(test-hex ALL DEPENDS ${test_hex_file})
+add_subdirectory(irobot)
+add_subdirectory(radio)
+add_subdirectory(robot)

@@ -1,7 +1,7 @@
-#include "radio/radio.h"
-#include "radio_packets/radio_packets.hpp"
-#include "irobot/irobot.hpp"
-#include "arduino_config.h"
+#include "../radio/radio.h"
+#include "../radio_packets/radio_packets.hpp"
+#include "../irobot/irobot.hpp"
+#include "../arduino_config.h"
 #include "Arduino.h"
 #include "gun.hpp"
 
