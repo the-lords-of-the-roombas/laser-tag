@@ -6,7 +6,8 @@ namespace arduino {
 
 enum pins {
     pin_baud_rate_change = 5,
-    pin_ir_emit = 3
+    pin_ir_emit = 3,
+    pin_sonar_io = 48,
 };
 
 }
