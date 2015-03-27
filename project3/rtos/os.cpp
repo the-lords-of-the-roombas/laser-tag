@@ -1120,6 +1120,8 @@ static void kernel_update_ticker(void)
  */
 void OS_Init()
 {
+    Disable_Interrupt();
+
 #ifdef TRACE_REQUESTS
     for(int i = 0; i < trace_size; ++i)
         trace[i] = '_';
