@@ -120,7 +120,7 @@ function(avr_hex name out_var elf_file)
   )
 endfunction()
 
-function(add_arduino_executable name)
+function(add_arduino_executable_custom name)
 
   set(obj_files "")
 
@@ -136,5 +136,13 @@ function(add_arduino_executable name)
   avr_hex(${name} hex_file ${elf_file})
 
   add_custom_target(${name} ALL DEPENDS ${hex_file})
+
+endfunction()
+
+function(add_arduino_executable name)
+
+  add_executable(${name} ${ARGN})
+  avr_hex(${name} hex_file ${name})
+  add_custom_target(${name}-hex ALL DEPENDS ${hex_file})
 
 endfunction()
