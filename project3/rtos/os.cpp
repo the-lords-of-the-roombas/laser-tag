@@ -924,8 +924,13 @@ static void kernel_service_publish()
 {
     ServiceSubscription *sub = requested_service->subscriptions;
 
+    bool current_is_subscriber = false;
+
     while(sub)
     {
+        if (sub->subscriber == cur_task)
+            current_is_subscriber = true;
+
         sub->unread = true;
 
         if (sub->waiting)
@@ -937,13 +942,21 @@ static void kernel_service_publish()
         sub = sub->next;
     }
 
-    // Pre-empt current task
-    kernel_enqueue_task(cur_task);
+    // Pre-empt publisher.
+    // We might be in an interrupt, so that the current task is
+    // also a subscriber and was already enqueued above.
+    // Only enqueue if that's not the case.
+    if (!current_is_subscriber)
+        kernel_enqueue_task(cur_task);
 }
 
 static void kernel_service_receive()
 {
-    requested_service_subscription->waiting = true;
+    ServiceSubscription *sub = requested_service_subscription;
+    kernel_assert(sub->subscriber == cur_task);
+
+    sub->waiting = true;
+
     cur_task->state = WAITING;
 }
 
