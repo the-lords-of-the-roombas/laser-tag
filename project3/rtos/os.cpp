@@ -14,6 +14,7 @@
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <avr/cpufunc.h>
 #include <util/delay.h>
 
 #include "os.h"
@@ -97,6 +98,51 @@ static void kernel_select_periodic_task();
 /** Error message used in OS_Abort() */
 static uint8_t volatile error_msg = ERR_USER_CALLED_OS_ABORT;
 
+#ifdef TRACE_REQUESTS
+volatile bool do_trace = true;
+static const int trace_size = 500;
+static char trace[trace_size];
+static volatile int trace_idx = 0;
+
+static void add_to_trace(const char *str)
+{
+    if (!do_trace)
+        return;
+    while(str && *str != '\0')
+    {
+        trace[trace_idx] = *str;
+        ++str;
+        trace_idx = (trace_idx + 1) % trace_size;
+    }
+}
+
+static void dump_trace()
+{
+    Serial.println("++++++++++");
+
+    int ti = trace_idx;
+    for(int i = 0; i < trace_size; ++i)
+    {
+        if (i % 20 == 0)
+            Serial.print(i/20 + 1);
+
+        if (trace[ti] != '0')
+            Serial.write(trace[ti]);
+        else
+            Serial.write('*');
+
+        if ((i+1) % 20 == 0)
+            Serial.write('\n');
+
+        ti = (ti + 1) % trace_size;
+    }
+    Serial.println("----------");
+    Serial.flush();
+}
+#else
+# define add_to_trace(x)
+# define dump_trace()
+#endif
 
 /* Forward declarations */
 /* kernel */
@@ -300,10 +346,12 @@ static void kernel_handle_request(void)
     switch(kernel_request)
     {
     case NONE:
+        add_to_trace(".N");
         /* Should not happen. */
         break;
 
     case TIMER_EXPIRED:
+        add_to_trace("|");
         // Pre-empt round robin tasks at each tick
         if (cur_task->level == RR)
             kernel_enqueue_task(cur_task);
@@ -313,6 +361,7 @@ static void kernel_handle_request(void)
         break;
 
     case TASK_CREATE:
+        add_to_trace(".TaC");
         kernel_request_retval = kernel_create_task();
 
         // Pre-empt current task if lower priority than new task
@@ -325,6 +374,7 @@ static void kernel_handle_request(void)
         break;
 
     case TASK_TERMINATE:
+        add_to_trace(".TaT");
         if(cur_task != idle_task)
         {
             kernel_terminate_task();
@@ -332,6 +382,7 @@ static void kernel_handle_request(void)
         break;
 
     case TASK_NEXT:
+        add_to_trace(".TaN");
         kernel_enqueue_task(cur_task);
 
         if (cur_task->level == PERIODIC)
@@ -340,11 +391,12 @@ static void kernel_handle_request(void)
         break;
 
     case TASK_GET_ARG:
+        add_to_trace(".TaA");
         /* Should not happen. Handled in task itself. */
         break;
 
     case TASK_PERIODIC_START:
-
+        add_to_trace(".TaPrS");
         if (!periodic_tasks_running)
         {
             periodic_tasks_running = true;
@@ -366,20 +418,28 @@ static void kernel_handle_request(void)
 
     case SERVICE_SUBSCRIBE:
     {
+        add_to_trace(".SS");
         kernel_service_subscribe();
         break;
     }
     case SERVICE_PUBLISH:
     {
+        add_to_trace(".SP");
         kernel_service_publish();
         break;
     }
     case SERVICE_RECEIVE:
     {
+        add_to_trace(".SR");
         kernel_service_receive();
         break;
     }
     default:
+        add_to_trace(".!");
+        //char request_str[50];
+        //sprintf(request_str, "%d", kernel_request);
+        //add_to_trace(request_str);
+
         /* Should never happen */
         kernel_abort_with(ERR_RTOS_INTERNAL_ERROR);
         break;
@@ -1047,6 +1107,11 @@ static void kernel_update_ticker(void)
  */
 void OS_Init()
 {
+#ifdef TRACE_REQUESTS
+    for(int i = 0; i < trace_size; ++i)
+        trace[i] = '_';
+#endif
+
     int i;
 
     /*
@@ -1162,10 +1227,19 @@ static void kernel_assert(bool flag)
  */
 void OS_Abort(void)
 {
+#ifdef TRACE_REQUESTS
+    __asm volatile( "cli" ::: "memory" );
+    do_trace = false;
+    __asm volatile( "sei" ::: "memory" );
+
+    dump_trace();
+#endif
+
     uint8_t i, j;
     uint8_t flashes;
 
     Disable_Interrupt();
+
 
 #ifdef TRACE_TASKS
     SET_PIN2;
@@ -1432,6 +1506,7 @@ int main()
 #ifdef INIT_ARDUINO_LIB
     init();
 #endif
+
     OS_Init();
     return 0;
 }
