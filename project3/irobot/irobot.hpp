@@ -106,10 +106,12 @@ public:
     irobot(HardwareSerial * serial, int brc_pin);
 
     bool begin();
+    void stop();
 
+    void send( opcode );
     void send( opcode, char byte );
     void send( opcode, const uint8_t *data, size_t data_size );
-    size_t receive( char *data, size_t size );
+    size_t receive( uint8_t *data, size_t size );
     void flush_received();
 
 private:
