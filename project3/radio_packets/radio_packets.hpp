@@ -2,6 +2,7 @@
 #define RADIO_PACKETS_INCLUDED
 
 #include "global.hpp"
+#include "local.hpp"
 
 #include <stdint.h>
 
@@ -21,6 +22,7 @@ typedef struct radio_packet
         shot_payload shot;
 
         // your other packets...
+        debug_payload debug;
     };
 
 } radio_packet_t;

@@ -1,0 +1,11 @@
+#include "global.hpp"
+
+enum local_packet_types
+{
+    debug_packet_type = global_packet_type_count
+};
+
+struct debug_payload
+{
+    int16_t test;
+};

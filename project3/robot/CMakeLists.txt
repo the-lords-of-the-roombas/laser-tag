@@ -1,15 +1,16 @@
 
-set(src
-  test.cpp
-  gun.cpp
-)
+## Sonar test
 
-add_executable(test ${src})
-target_link_libraries(test irobot radio rtos arduino)
+add_arduino_executable(test-sonar sonar.cpp test-sonar.cpp)
+target_link_libraries(test-sonar irobot rtos arduino)
 
-set_property(TARGET test PROPERTY OUTPUT_NAME test.elf)
 
-## Make HEX
+## Drive test
 
-avr_hex(test test_hex_file test.elf)
-add_custom_target(test-hex ALL DEPENDS ${test_hex_file})
+add_arduino_executable(test-drive test-drive.cpp)
+target_link_libraries(test-drive irobot rtos arduino)
+
+## Radio test
+
+add_arduino_executable(test-radio test-radio.cpp)
+target_link_libraries(test-radio rtos arduino radio)
