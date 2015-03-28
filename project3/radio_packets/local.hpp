@@ -8,4 +8,5 @@ enum local_packet_types
 struct debug_payload
 {
     int16_t test;
+    uint16_t proximity[6];
 };

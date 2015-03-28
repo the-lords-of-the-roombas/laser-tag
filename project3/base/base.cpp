@@ -59,6 +59,15 @@ int main()
                 Serial.print("Test: ");
                 Serial.print(rx_pkt.debug.test);
                 Serial.println();
+
+                Serial.print("Proximity:");
+                for (int i = 0; i < 6; ++i)
+                {
+                    Serial.print(rx_pkt.debug.proximity[i]);
+                    Serial.write(' ');
+                }
+                Serial.println();
+
                 break;
             }
             default:

@@ -8,9 +8,9 @@ target_link_libraries(test-sonar irobot rtos arduino)
 ## Drive test
 
 add_arduino_executable(test-drive test-drive.cpp)
-target_link_libraries(test-drive irobot rtos arduino)
+target_link_libraries(test-drive radio irobot rtos arduino)
 
 ## Radio test
 
 add_arduino_executable(test-radio test-radio.cpp)
-target_link_libraries(test-radio rtos arduino radio)
+target_link_libraries(test-radio radio rtos arduino)

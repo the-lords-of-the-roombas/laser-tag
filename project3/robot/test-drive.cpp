@@ -16,8 +16,21 @@ enum navigation_state
     nav_turn_around,
 };
 
-irobot robot(&Serial1, arduino::pin_baud_rate_change);
-Service * volatile report_service;
+// Radio
+
+static uint8_t radio_base_address[5] = BASE_RADIO_ADDRESS;
+static uint8_t radio_robot0_address[5] = ROBOT_0_RADIO_ADDRESS;
+
+extern "C" {
+void radio_rxhandler(uint8_t pipenumber)
+{
+}
+}
+
+// Control
+
+irobot g_robot(&Serial1, arduino::pin_baud_rate_change);
+Service * volatile g_report_service;
 uint8_t volatile g_distance_bytes[2];
 int16_t volatile g_distance_delta;
 int16_t volatile g_distance;
@@ -25,6 +38,14 @@ int16_t volatile g_distance;
 int16_t volatile g_angle_delta;
 int16_t volatile g_angle;
 
+struct sensor_data
+{
+    bool bump;
+    bool wheel_drop;
+    uint16_t proximity[6];
+};
+
+static sensor_data g_sensors;
 
 void drive(irobot & robot, int16_t velocity, int16_t radius)
 {
@@ -46,6 +67,63 @@ void drive_straight(irobot & robot, int16_t velocity)
     robot.send(irobot::op_drive, data, 4);
 }
 
+void acquire_sensors(sensor_data & d)
+{
+    {
+        static const int sensor_count = 7;
+        uint8_t data[] = {
+            sensor_count,
+            irobot::sense_bumps_and_wheel_drops,
+            irobot::sense_light_bump_left_signal,
+            irobot::sense_light_bump_front_left_signal,
+            irobot::sense_light_bump_center_left_signal,
+            irobot::sense_light_bump_center_right_signal,
+            irobot::sense_light_bump_front_right_signal,
+            irobot::sense_light_bump_right_signal,
+        };
+#if 0
+        data[0] = sensor_count;
+        data[1] = irobot::sense_bumps_and_wheel_drops;
+        data[2] = irobot::sense_light_bump_left_signal;
+        data[3] = irobot::sense_light_bump_front_left_signal;
+        data[4] = irobot::sense_light_bump_center_left_signal;
+        data[5] = irobot::sense_light_bump_center_right_signal;
+        data[6] = irobot::sense_light_bump_front_right_signal;
+        data[7] = irobot::sense_light_bump_right_signal;
+#endif
+        g_robot.send(irobot::op_sensor_list, data, sensor_count + 1);
+    }
+
+    uint8_t raw_bumps_and_wheel_drops;
+    //uint8_t raw_distance_data[2];
+    //uint8_t raw_angle_data[2];
+    uint8_t raw_proxim_l[2];
+    uint8_t raw_proxim_lf[2];
+    uint8_t raw_proxim_lc[2];
+    uint8_t raw_proxim_rc[2];
+    uint8_t raw_proxim_rf[2];
+    uint8_t raw_proxim_r[2];
+    g_robot.receive(&raw_bumps_and_wheel_drops, 1);
+    //robot.receive(raw_distance_data, 2);
+    //robot.receive(raw_angle_data, 2);
+    g_robot.receive(raw_proxim_l, 2);
+    g_robot.receive(raw_proxim_lf, 2);
+    g_robot.receive(raw_proxim_lc, 2);
+    g_robot.receive(raw_proxim_rc, 2);
+    g_robot.receive(raw_proxim_rf, 2);
+    g_robot.receive(raw_proxim_r, 2);
+
+    d.wheel_drop = raw_bumps_and_wheel_drops & (_BV(3) | _BV(2));
+    d.bump = raw_bumps_and_wheel_drops & (_BV(1) | _BV(0));
+    d.proximity[0] = bytes_to_int16(raw_proxim_l);
+    d.proximity[1] = bytes_to_int16(raw_proxim_lf);
+    d.proximity[2] = bytes_to_int16(raw_proxim_lc);
+    d.proximity[3] = bytes_to_int16(raw_proxim_rc);
+    d.proximity[4] = bytes_to_int16(raw_proxim_rf);
+    d.proximity[5] = bytes_to_int16(raw_proxim_r);
+}
+
+#if 0
 void navigate()
 {
     int16_t travelled_m = 0;
@@ -53,46 +131,6 @@ void navigate()
     int16_t turned_deg = 0;
 
     navigation_state state = nav_go;
-
-    for(;;)
-    {
-        {
-            static bool on = true;
-            if (on)
-                digitalWrite(13, HIGH);
-            else
-                digitalWrite(13, LOW);
-            on = !on;
-        }
-
-        {
-            static const int sensor_count = 3;
-            uint8_t data[sensor_count+1];
-            data[0] = sensor_count;
-            data[1] = irobot::sense_bumps_and_wheel_drops;
-            data[2] = irobot::sense_distance;
-            data[3] = irobot::sense_angle;
-
-            robot.send(irobot::op_sensor_list, data, sensor_count + 1);
-        }
-
-        uint8_t bumps_and_wheel_drops;
-        uint8_t distance_data[2];
-        uint8_t angle_data[2];
-        robot.receive(&bumps_and_wheel_drops, 1);
-        robot.receive(distance_data, 2);
-        robot.receive(angle_data, 2);
-
-        bool wheel_drop = bumps_and_wheel_drops & (_BV(3) | _BV(2));
-        bool bump = bumps_and_wheel_drops & (_BV(1) | _BV(0));
-
-        if (wheel_drop)
-        {
-            robot.stop();
-            OS_Abort();
-        }
-
-        //255 251 -5
 
         // Update travelled distance
         {
@@ -103,14 +141,13 @@ void navigate()
             g_distance_bytes[1] = distance_data[1];
             g_distance_delta = distance_delta_mm;
             g_distance = travelled_mm;
-            Service_Publish(report_service, 0);
-#if 0
+
             if (travelled_mm >= 1000)
             {
                 travelled_m += travelled_mm / 1000;
                 travelled_mm = travelled_mm % 1000;
             }
-#endif
+
         }
         // Update turned angle
         {
@@ -190,51 +227,124 @@ void navigate()
         }
 
         Task_Next();
+}
+#endif
+
+void control()
+{
+    int back_up_ticks = 0;
+
+    for(;;)
+    {
+        {
+            static bool on = true;
+            if (on)
+                digitalWrite(13, HIGH);
+            else
+                digitalWrite(13, LOW);
+            on = !on;
+        }
+
+        acquire_sensors(g_sensors);
+
+        memory_barrier();
+
+        Service_Publish(g_report_service, 0);
+
+        if (g_sensors.wheel_drop)
+        {
+            g_robot.stop();
+            OS_Abort();
+        }
+
+        bool back_up = sum(g_sensors.proximity, 6) > 200;
+
+        back_up_ticks = (back_up ? 100 : max(back_up_ticks - 1, 0));
+
+        if (back_up_ticks)
+        {
+            drive_straight(g_robot, -100);
+        }
+        else
+        {
+            //rotate
+            //drive(g_robot, 20, 1);
+
+            drive_straight(g_robot, 100);
+        }
+
+        Task_Next();
     }
 }
 
 void report()
 {
-    ServiceSubscription *report = Service_Subscribe(report_service);
+    ServiceSubscription *report = Service_Subscribe(g_report_service);
+
     for(;;)
     {
         Service_Receive(report);
-        //Serial.print(g_distance_bytes[0]);
-        //Serial.write(' ');
-        //Serial.print(g_distance_bytes[1]);
-        //Serial.write(' ');
-        Serial.print("D: ");
-        Serial.print(g_distance_delta);
-        Serial.write(' ');
-        Serial.print(g_distance);
-        Serial.println();
 
-        Serial.print("A: ");
-        Serial.print(g_angle_delta);
-        Serial.write(' ');
-        Serial.print(g_angle);
-        Serial.println();
+        memory_barrier();
+
+        radio_packet_t tx_packet;
+        tx_packet.type = debug_packet_type;
+        for (int i = 0; i < 6; ++i)
+            tx_packet.debug.proximity[i] = g_sensors.proximity[i];
+
+        Radio_Transmit(&tx_packet, RADIO_WAIT_FOR_TX);
+
+        // Clear receive buffer
+        radio_packet_t rx_packet;
+        while(Radio_Receive(&rx_packet) == RADIO_RX_MORE_PACKETS) {}
     }
+}
+
+void init_radio()
+{
+    // Start up radio
+    pinMode(arduino::pin_radio_vcc, OUTPUT);
+
+    digitalWrite(arduino::pin_radio_vcc, LOW);
+    delay(100);
+    digitalWrite(arduino::pin_radio_vcc, HIGH);
+    delay(100);
+
+    Radio_Init(RADIO_CHANNEL);
+
+    // configure the receive settings for radio pipe 0
+    Radio_Configure_Rx(RADIO_PIPE_0, radio_robot0_address, ENABLE);
+    // configure radio transceiver settings
+    Radio_Configure(RADIO_RATE, RADIO_HIGHEST_POWER);
+
+    // set destination address
+    Radio_Set_Tx_Addr(radio_base_address);
 }
 
 int r_main()
 {
-
     pinMode(13, OUTPUT);
 
     //Serial.begin(9600);
 
-    report_service = Service_Init();
+    g_report_service = Service_Init();
 
-    robot.begin();
 
-    robot.send(irobot::op_full_mode );
+    // Init radio
+
+    init_radio();
+
+    // Init robot
+
+    g_robot.begin();
+
+    g_robot.send(irobot::op_full_mode );
 
     {
         // Confirm mode
         uint8_t mode;
-        robot.send(irobot::op_sensor, irobot::sense_oi_mode);
-        robot.receive(&mode, 1);
+        g_robot.send(irobot::op_sensor, irobot::sense_oi_mode);
+        g_robot.receive(&mode, 1);
         if (mode != 3)
             OS_Abort();
     }
@@ -247,9 +357,11 @@ int r_main()
         delay(300);
     }
 
+    // Create tasks
+
     Task_Create_RR(report, 0);
 
-    Task_Create_Periodic(navigate, 0, 50, 5, 0);
+    Task_Create_Periodic(control, 0, 5, 5, 0);
 
     Task_Periodic_Start();
 
