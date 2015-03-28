@@ -17,6 +17,8 @@ inline int16_t bytes_to_int16(uint8_t h, uint8_t l)
     return result;
 }
 
+#define memory_barrier() asm volatile ("" ::: "memory")
+
 }
 
 #endif // RTOS_UTIL_INCLUDED
