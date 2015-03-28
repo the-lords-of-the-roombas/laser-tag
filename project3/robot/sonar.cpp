@@ -61,19 +61,44 @@ void sonar::init(Service *request_service, Service *reply_service)
     TCCR5A = 0;
     TCCR5B = 0;
     TIMSK5 = 0;
+
+#if SONAR_CLOCK_SCALE == 64
+    // Use 1/64 prescaler.
+    TCCR5B |= _BV(CS51) | _BV(CS50);
+#elif SONAR_CLOCK_SCALE == 256
+    // Use 1/256 prescaler. Provides maximum measure duration ~ 1sec.
+    TCCR5B |= _BV(CS52);
+#endif
+
+    // Reset counter
+    TCNT5 = 0;
 }
 
 void sonar::work()
 {
+    pinMode(7,OUTPUT);
+
     for(;;)
     {
         Service_Receive(m_request_sub);
 
+        digitalWrite(7, HIGH);
+        delayMicroseconds(10);
+        digitalWrite(7, LOW);
+#if 0
+        digitalWrite(13, HIGH);
+        delay(50);
+        digitalWrite(13, LOW);
+#endif
         speak();
 
         int echo_duration = listen();
 
         Service_Publish(m_reply_service, echo_duration);
+
+        digitalWrite(7, HIGH);
+        delayMicroseconds(10);
+        digitalWrite(7, LOW);
     }
 }
 
@@ -83,33 +108,46 @@ void sonar::speak()
     TIMSK5 = 0;
     pinMode(arduino::pin_sonar_io, OUTPUT);
     digitalWrite(arduino::pin_sonar_io, HIGH);
-    delayMicroseconds(10);
+    delayMicroseconds(15);
     digitalWrite(arduino::pin_sonar_io, LOW);
 }
 
 int sonar::listen()
 {
-    g_time = 0;
+    g_time = TCNT5;
+
     pinMode(arduino::pin_sonar_io, INPUT);
     digitalWrite(arduino::pin_sonar_io, LOW);
 
-    // Use 1/256 prescaler. Provides maximum measure duration ~ 1sec.
-    TCCR5B |= _BV(CS52);
     // Select rising edge to trigger input capture
     set_capture_edge(rising_edge);
-    // Reset counter
-    TCNT5 = 0;
-    // Clear all interrupt flags
-    TIFR5 = 0xFF;
+    // Clear input capture interrupt flag
+    TIFR5 |= _BV(ICF5);
     // Enable input capture interrupt
     TIMSK5 |= _BV(ICIE5);
+#if 0
+    pinMode(arduino::pin_sonar_io, OUTPUT);
+    digitalWrite(arduino::pin_sonar_io, HIGH);
+    delay(10);
+    digitalWrite(arduino::pin_sonar_io, LOW);
+#endif
 
-    return Service_Receive(m_echo_sub);
+    return 0;
+    //return Service_Receive(m_echo_sub);
 }
 
 #if 1
 ISR(TIMER5_CAPT_vect)
 {
+#if 0
+    static bool on = false;
+
+    on = !on;
+    if (on)
+        digitalWrite(13, HIGH);
+    else
+        digitalWrite(13, LOW);
+#endif
 
     uint16_t current_time = ICR5;
 
@@ -117,26 +155,32 @@ ISR(TIMER5_CAPT_vect)
     {
     case rising_edge:
     {
-        //digitalWrite(13, HIGH);
+        digitalWrite(13, HIGH);
 
         set_capture_edge(falling_edge);
+        TIFR5 |= _BV(ICF5);
 
         g_time = current_time;
+        //g_time = TCNT5;
 
         break;
     }
     case falling_edge:
     {
-        //digitalWrite(13, LOW);
+        digitalWrite(13, LOW);
 
         // Disable input capture interrupt
         TIMSK5 = 0;
 
         uint16_t duration = current_time - g_time;
+        //uint16_t duration = TCNT5 - g_time;
+
         Service_Publish(g_echo_service, duration);
 
         break;
     }
+    default:
+        OS_Abort();
     }
 }
 #endif

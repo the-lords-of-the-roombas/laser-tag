@@ -5,6 +5,8 @@
 
 namespace robot_tag_game {
 
+#define SONAR_CLOCK_SCALE 64
+
 class sonar
 {
 public:
@@ -12,6 +14,7 @@ public:
     void init(Service *request_service, Service *reply_service);
     int pin();
     void work();
+    void tick();
 private:
     static void task();
     void speak();
