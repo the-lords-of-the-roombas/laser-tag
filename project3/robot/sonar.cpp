@@ -58,6 +58,8 @@ void sonar::init(Service *request_service, Service *reply_service)
     m_request_sub = Service_Subscribe(m_request_service);
     m_echo_sub = Service_Subscribe(g_echo_service);
 
+    cli();
+
     TCCR5A = 0;
     TCCR5B = 0;
     TIMSK5 = 0;
@@ -72,6 +74,8 @@ void sonar::init(Service *request_service, Service *reply_service)
 
     // Reset counter
     TCNT5 = 0;
+
+    sei();
 }
 
 void sonar::work()
@@ -93,6 +97,7 @@ void sonar::work()
         speak();
 
         int echo_duration = listen();
+        //int echo_duration = 100;
 
         Service_Publish(m_reply_service, echo_duration);
 
@@ -114,10 +119,12 @@ void sonar::speak()
 
 int sonar::listen()
 {
-    g_time = TCNT5;
+    cli();
 
     pinMode(arduino::pin_sonar_io, INPUT);
     digitalWrite(arduino::pin_sonar_io, LOW);
+
+    g_time = TCNT5;
 
     // Select rising edge to trigger input capture
     set_capture_edge(rising_edge);
@@ -125,6 +132,16 @@ int sonar::listen()
     TIFR5 |= _BV(ICF5);
     // Enable input capture interrupt
     TIMSK5 |= _BV(ICIE5);
+    // Set output-compare A to now + timeout (40ms)
+    // = 40 * cycles-per-ms (16e3) / clock scale:
+    OCR5A = TCNT5 + (40 * 16e3 / SONAR_CLOCK_SCALE);
+    // Clear flag
+    TIFR5 |= _BV(OCF5A);
+    // Enable output-compare A interrupt
+    TIMSK5 |= _BV(OCIE5A);
+
+    sei();
+
 #if 0
     pinMode(arduino::pin_sonar_io, OUTPUT);
     digitalWrite(arduino::pin_sonar_io, HIGH);
@@ -132,13 +149,17 @@ int sonar::listen()
     digitalWrite(arduino::pin_sonar_io, LOW);
 #endif
 
-    return 0;
-    //return Service_Receive(m_echo_sub);
+    uint16_t echo_duration = Service_Receive(m_echo_sub);
+
+    return echo_duration;
 }
 
 #if 1
 ISR(TIMER5_CAPT_vect)
 {
+    if (!g_echo_service)
+        return;
+
 #if 0
     static bool on = false;
 
@@ -169,7 +190,7 @@ ISR(TIMER5_CAPT_vect)
     {
         digitalWrite(13, LOW);
 
-        // Disable input capture interrupt
+        // Disable all interrupts
         TIMSK5 = 0;
 
         uint16_t duration = current_time - g_time;
@@ -183,5 +204,23 @@ ISR(TIMER5_CAPT_vect)
         OS_Abort();
     }
 }
+#if 1
+ISR(TIMER5_COMPA_vect)
+{
+    //return;
+
+    if (!g_echo_service)
+        return;
+
+    // Disable all interrupts
+    TIMSK5 = 0;
+
+    digitalWrite(13, LOW);
+
+    // Just publish a huge number
+    Service_Publish(g_echo_service, TCNT5 - g_time);
+}
+#endif
+
 #endif
 }

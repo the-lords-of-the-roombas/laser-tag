@@ -27,7 +27,7 @@ static void report()
 
 static void trigger()
 {
-    pinMode(12, OUTPUT);
+    //pinMode(12, OUTPUT);
 
     for(;;)
     {
@@ -35,9 +35,9 @@ static void trigger()
             _delay_ms(100);*/
         delay(700);
 
-        digitalWrite(12, HIGH);
+        //digitalWrite(12, HIGH);
         Service_Publish(sonar_request_service, 0);
-        digitalWrite(12, LOW);
+        //digitalWrite(12, LOW);
     }
 }
 

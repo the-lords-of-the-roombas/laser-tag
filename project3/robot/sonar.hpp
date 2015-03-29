@@ -14,9 +14,7 @@ public:
     void init(Service *request_service, Service *reply_service);
     int pin();
     void work();
-    void tick();
 private:
-    static void task();
     void speak();
     int listen();
     Service * volatile m_request_service;
