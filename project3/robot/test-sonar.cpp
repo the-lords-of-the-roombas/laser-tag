@@ -15,13 +15,23 @@ static void report()
     for(;;)
     {
         int16_t duration_cycles = Service_Receive(sub);
-        int16_t duration_ms = (long) duration_cycles * SONAR_CLOCK_SCALE / 16e3;
+        /*
+        cycles_per_second = 16e6 / SONAR_CLOCK_SCALE;
+        cycles_per_us = 16 / SONAR_CLOCK_CYCLE;
+        int16_t us = cycles / cycles_per_us;
+        cm = us / 58;
+        cm = cycles / (cycles_per_us * 58) = cycles / (58 * 16 / SONAR_CLOCK_SCALE)
+        */
+        int16_t duration_ms =
+                ((uint32_t) duration_cycles * SONAR_CLOCK_SCALE) / (58UL * 16UL);
 #if 0
         digitalWrite(13, HIGH);
         delay(50);
         digitalWrite(13, LOW);
 #endif
-        Serial.println(duration_cycles);
+        Serial.print(duration_cycles);
+        Serial.print(" ");
+        Serial.println(duration_ms);
     }
 }
 
@@ -33,7 +43,7 @@ static void trigger()
     {
         /*for (int i = 0; i < 10; ++i)
             _delay_ms(100);*/
-        delay(700);
+        delay(300);
 
         //digitalWrite(12, HIGH);
         Service_Publish(sonar_request_service, 0);

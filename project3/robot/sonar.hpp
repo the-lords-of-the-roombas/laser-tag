@@ -5,7 +5,7 @@
 
 namespace robot_tag_game {
 
-#define SONAR_CLOCK_SCALE 64
+#define SONAR_CLOCK_SCALE 256
 
 class sonar
 {
