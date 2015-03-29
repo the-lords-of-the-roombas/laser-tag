@@ -32,14 +32,22 @@ T sum(const T *data, unsigned int count)
 }
 
 template <typename T> inline
-T array_max(const T *data, unsigned int count)
+T array_max(const T *data, unsigned int count, unsigned int * index)
 {
     if (count == 0)
+    {
+        *index = 0;
         return 0;
+    }
     T m = data[0];
     for(unsigned int i = 1; i < count; ++i)
+    {
         if (data[i] > m)
+        {
+            *index = i;
             m = data[i];
+        }
+    }
     return m;
 }
 
