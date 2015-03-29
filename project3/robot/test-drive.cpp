@@ -5,6 +5,7 @@
 #include "../irobot/irobot.hpp"
 #include "../radio/radio.h"
 #include "../radio_packets/radio_packets.hpp"
+#include <util/atomic.h>
 #include "Arduino.h"
 
 using namespace robot_tag_game;
@@ -45,7 +46,29 @@ struct sensor_data
     uint16_t proximity[6];
 };
 
+struct sensor_derived_data
+{
+    int16_t proximity_center;
+};
+
+struct control_behavior
+{
+    enum types
+    {
+        wait,
+        drive_forward,
+        turn_right,
+        turn_left,
+        face_obstacle
+    };
+
+    types type;
+    uint16_t until;
+};
+
 static sensor_data g_sensors;
+static sensor_derived_data g_sensors_derived;
+static control_behavior g_ctl_behavior;
 
 void drive(irobot & robot, int16_t velocity, int16_t radius)
 {
@@ -247,19 +270,64 @@ void control()
 
         acquire_sensors(g_sensors);
 
-        memory_barrier();
-
-        Service_Publish(g_report_service, 0);
-
         if (g_sensors.wheel_drop)
         {
             g_robot.stop();
             OS_Abort();
         }
 
-        bool back_up = sum(g_sensors.proximity, 6) > 200;
+        // Compute
 
-        back_up_ticks = (back_up ? 100 : max(back_up_ticks - 1, 0));
+        uint16_t prox_max = array_max(g_sensors.proximity, 6);
+        uint16_t prox_sum = sum(g_sensors.proximity, 6);
+        uint16_t prox_sum_left = sum(g_sensors.proximity, 3);
+        uint16_t prox_sum_right = sum(g_sensors.proximity + 3, 3);
+
+        int prox_center = 0;
+
+        if (prox_sum_left > prox_sum_right)
+            prox_center = -1;
+        else if (prox_sum_left < prox_sum_right)
+            prox_center = 1;
+
+        //int prox_center = centroid(g_sensors.proximity, 6, prox_sum) - 50;
+
+        bool close_obstacle = false;
+        bool far_obstacle = false;
+
+        for (int i = 0; i < 6; ++i)
+        {
+            if (g_sensors.proximity[i] > 50)
+            {
+                close_obstacle = true;
+                far_obstacle = true;
+            }
+            else if (g_sensors.proximity[i] > 10)
+            {
+                far_obstacle = true;
+            }
+        }
+
+        bool back_up = g_sensors.bump;
+        back_up_ticks = (back_up ? 10 : max(back_up_ticks - 1, 0));
+
+
+        // Exchange data
+
+        g_sensors_derived.proximity_center = prox_center;
+
+        memory_barrier();
+
+        Service_Publish(g_report_service, 0);
+
+        control_behavior behavior;
+
+        ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
+        {
+            behavior = g_ctl_behavior;
+        }
+
+        // Control
 
         if (back_up_ticks)
         {
@@ -267,10 +335,45 @@ void control()
         }
         else
         {
-            //rotate
-            //drive(g_robot, 20, 1);
-
-            drive_straight(g_robot, 100);
+            switch(behavior.type)
+            {
+            case control_behavior::wait:
+            {
+                // stop:
+                drive_straight(g_robot, 0);
+                break;
+            }
+            case control_behavior::drive_forward:
+            {
+                if (close_obstacle)
+                {
+                    // Rotate away from obstacle
+                    int velocity = 100;
+                    int radius = prox_center > 0 ? 1 : -1;
+                    drive(g_robot, velocity, radius);
+                }
+                else if (far_obstacle)
+                {
+                    // Veer away from obstacle
+                    int velocity = 100;
+                    int radius = prox_center > 0 ? 100 : -100;
+                    drive(g_robot, velocity, radius);
+                }
+                else
+                {
+                    drive_straight(g_robot, 300);
+                }
+                break;
+            }
+            case control_behavior::face_obstacle:
+            {
+                drive_straight(g_robot, 0);
+                break;
+            }
+            default:
+                g_robot.stop();
+                OS_Abort();
+            }
         }
 
         Task_Next();
@@ -291,6 +394,7 @@ void report()
         tx_packet.type = debug_packet_type;
         for (int i = 0; i < 6; ++i)
             tx_packet.debug.proximity[i] = g_sensors.proximity[i];
+        tx_packet.debug.proximity_center = g_sensors_derived.proximity_center;
 
         Radio_Transmit(&tx_packet, RADIO_WAIT_FOR_TX);
 
@@ -325,10 +429,7 @@ int r_main()
 {
     pinMode(13, OUTPUT);
 
-    //Serial.begin(9600);
-
     g_report_service = Service_Init();
-
 
     // Init radio
 
@@ -356,6 +457,12 @@ int r_main()
         digitalWrite(13, LOW);
         delay(300);
     }
+
+    // Init controller
+
+    g_ctl_behavior.type = control_behavior::drive_forward;
+
+    memory_barrier();
 
     // Create tasks
 
