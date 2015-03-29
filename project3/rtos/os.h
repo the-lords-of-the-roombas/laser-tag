@@ -187,7 +187,7 @@ extern "C" {
 #define QUANTUM       5     // a quantum for RR tasks
 
 /** thread runtime stack */
-#define MAXSTACK      256   // bytes
+#define MAXSTACK      512   // bytes
 
 /* scheduling levels */
 
