@@ -49,6 +49,7 @@ struct sensor_data
 struct sensor_derived_data
 {
     int16_t proximity_center;
+    float proximities[3];
 };
 
 struct control_behavior
@@ -88,6 +89,11 @@ void drive_straight(irobot & robot, int16_t velocity)
     data[2] = 0x80;
     data[3] = 0x00;
     robot.send(irobot::op_drive, data, 4);
+}
+
+void drive_stop(irobot & robot)
+{
+    drive_straight(robot, 0);
 }
 
 void acquire_sensors(sensor_data & d)
@@ -253,9 +259,34 @@ void navigate()
 }
 #endif
 
+float proximity_to_target( int16_t target,
+                           int16_t *positions,
+                           uint16_t *proximities,
+                           unsigned int count)
+{
+    float result = 0;
+    for(unsigned int i = 0; i < count; ++i)
+    {
+        int16_t position = positions[i];
+        float proximity = proximities[i] / 1000.f;
+
+        int16_t distance = target - position;
+        if (distance < 0)
+            distance = -distance;
+        if (distance > 100)
+            distance = 100;
+        int16_t closeness = 100 - distance;
+
+        result += proximity * closeness;
+    }
+    return result;
+}
+
 void control()
 {
-    int back_up_ticks = 0;
+    int past_back_up = 0;
+    float past_prox_center = 0.0;
+    int past_target_found = 0;
 
     for(;;)
     {
@@ -276,6 +307,11 @@ void control()
             OS_Abort();
         }
 
+        // Update past
+
+        past_back_up = max(past_back_up - 1, 0);
+        past_target_found = max(past_target_found - 1, 0);
+
         // Compute
 
         uint16_t prox_max = array_max(g_sensors.proximity, 6);
@@ -283,12 +319,20 @@ void control()
         uint16_t prox_sum_left = sum(g_sensors.proximity, 3);
         uint16_t prox_sum_right = sum(g_sensors.proximity + 3, 3);
 
+        int16_t prox_weights[] = { -60, -26, -8, 26, 50, 102 };
+
+        float prox_left = proximity_to_target(-100, prox_weights, g_sensors.proximity, 6);
+        float prox_right = proximity_to_target(100, prox_weights, g_sensors.proximity, 6);
+        float prox_center = proximity_to_target(0, prox_weights, g_sensors.proximity, 6);
+
+#if 0
         int prox_center = 0;
 
         if (prox_sum_left > prox_sum_right)
             prox_center = -1;
         else if (prox_sum_left < prox_sum_right)
             prox_center = 1;
+#endif
 
         //int prox_center = centroid(g_sensors.proximity, 6, prox_sum) - 50;
 
@@ -308,13 +352,16 @@ void control()
             }
         }
 
-        bool back_up = g_sensors.bump;
-        back_up_ticks = (back_up ? 10 : max(back_up_ticks - 1, 0));
+        if(g_sensors.bump)
+            past_back_up = 10;
 
 
         // Exchange data
 
-        g_sensors_derived.proximity_center = prox_center;
+        //g_sensors_derived.proximity_center = prox_center;
+        g_sensors_derived.proximities[0] = prox_left;
+        g_sensors_derived.proximities[1] = prox_center;
+        g_sensors_derived.proximities[2] = prox_right;
 
         memory_barrier();
 
@@ -329,7 +376,7 @@ void control()
 
         // Control
 
-        if (back_up_ticks)
+        if (past_back_up)
         {
             drive_straight(g_robot, -100);
         }
@@ -345,6 +392,9 @@ void control()
             }
             case control_behavior::drive_forward:
             {
+                drive_straight(g_robot, 0);
+                break;
+#if 0
                 if (close_obstacle)
                 {
                     // Rotate away from obstacle
@@ -364,16 +414,50 @@ void control()
                     drive_straight(g_robot, 300);
                 }
                 break;
+#endif
             }
             case control_behavior::face_obstacle:
             {
-                drive_straight(g_robot, 0);
+                if (prox_max < 15)
+                {
+                    drive_stop(g_robot);
+                }
+                else
+                {
+                    int turn_direction = prox_left > prox_right ? 1 : -1;
+
+                    if (past_target_found)
+                    {
+                        drive_stop(g_robot);
+                    }
+                    else if ( prox_center < prox_left || prox_center < prox_right )
+                    {
+                        drive(g_robot, 100, turn_direction);
+                    }
+                    else
+                    {
+                        // maximize
+                        if (prox_center > past_prox_center)
+                        {
+                            drive(g_robot, 100, turn_direction);
+                        }
+                        else
+                        {
+                            past_target_found = 100;
+                            drive_stop(g_robot);
+                        }
+                    }
+                }
                 break;
             }
             default:
                 g_robot.stop();
                 OS_Abort();
             }
+
+            // Update past
+
+            past_prox_center = prox_center;
         }
 
         Task_Next();
@@ -392,15 +476,16 @@ void report()
 
         radio_packet_t tx_packet;
         tx_packet.type = debug_packet_type;
-        for (int i = 0; i < 6; ++i)
-            tx_packet.debug.proximity[i] = g_sensors.proximity[i];
-        tx_packet.debug.proximity_center = g_sensors_derived.proximity_center;
+        for (int i = 0; i < 3; ++i)
+            tx_packet.debug.proximities[i] = g_sensors_derived.proximities[i];
 
         Radio_Transmit(&tx_packet, RADIO_WAIT_FOR_TX);
 
         // Clear receive buffer
         radio_packet_t rx_packet;
         while(Radio_Receive(&rx_packet) == RADIO_RX_MORE_PACKETS) {}
+
+        delay(100);
     }
 }
 
@@ -460,7 +545,7 @@ int r_main()
 
     // Init controller
 
-    g_ctl_behavior.type = control_behavior::drive_forward;
+    g_ctl_behavior.type = control_behavior::face_obstacle;
 
     memory_barrier();
 
@@ -468,7 +553,7 @@ int r_main()
 
     Task_Create_RR(report, 0);
 
-    Task_Create_Periodic(control, 0, 5, 5, 0);
+    Task_Create_Periodic(control, 0, 10, 10, 0);
 
     Task_Periodic_Start();
 

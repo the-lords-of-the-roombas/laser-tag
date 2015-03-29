@@ -57,15 +57,15 @@ int main()
             case debug_packet_type:
             {
                 Serial.print("Proximity:");
-                for (int i = 0; i < 6; ++i)
+                for (int i = 0; i < 3; ++i)
                 {
-                    Serial.print(rx_pkt.debug.proximity[i]);
+                    Serial.print(rx_pkt.debug.proximities[i]);
                     Serial.write(' ');
                 }
                 Serial.println();
 
-                Serial.print("P C = ");
-                Serial.println(rx_pkt.debug.proximity_center);
+                //Serial.print("P C = ");
+                //Serial.println(rx_pkt.debug.proximity_center);
 
                 break;
             }
