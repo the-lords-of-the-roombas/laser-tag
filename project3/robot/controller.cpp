@@ -121,6 +121,21 @@ void controller::run()
 
         bool object_centered = false;
 
+        int16_t requested_velocity;
+        switch(input.speed)
+        {
+        case super_fast:
+            requested_velocity = 400; break;
+        case fast:
+            requested_velocity = 300; break;
+        case slow:
+            requested_velocity = 200; break;
+        case super_slow:
+            requested_velocity = 100; break;
+        default:
+            requested_velocity = 0; break;
+        }
+
         // Compute controls
 
         int16_t velocity = 0;
@@ -136,15 +151,16 @@ void controller::run()
         {
             if (input.direction != straight)
             {
-                velocity = 300;
+                velocity = requested_velocity;
                 radius = input.direction == left ? 1 : -1;
             }
             else if (prox_max < 50)
             {
-                velocity = 300;
+                velocity = requested_velocity;
             }
             else
             {
+                velocity = 0;
                 // We are not turning,
                 // and we are in close proximity of an object.
                 // Stop.
@@ -180,13 +196,13 @@ void controller::run()
                 else
                 {
                     // Turn towards the object
-                    velocity = 100;
+                    velocity = 50;
                     radius =  prox_max_idx < 2 ? 1 : -1;
                 }
             }
             else
             {
-                velocity = 300;
+                velocity = requested_velocity;
             }
             break;
         }

@@ -26,6 +26,14 @@ public:
         right
     };
 
+    enum speed_t
+    {
+        super_fast,
+        fast,
+        slow,
+        super_slow
+    };
+
     struct input_t
     {
         input_t():
@@ -37,6 +45,7 @@ public:
 
         controller::behavior_t behavior;
         direction_t direction;
+        speed_t speed;
         uint16_t sonar_cm;
         uint16_t sonar_cm_seek_threshold;
     };

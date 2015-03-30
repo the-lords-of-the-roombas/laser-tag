@@ -56,7 +56,7 @@ void sequencer::run()
 
         // Update environment variables
 
-        bool target_seen = sonar_cm < 50;
+        bool target_seen = sonar_cm < 100;
 
         ctl_in.sonar_cm = sonar_cm;
 
@@ -165,27 +165,33 @@ void sequencer::run()
         {
             ctl_in.behavior = controller::go;
             ctl_in.direction = controller::straight;
+            ctl_in.speed = controller::fast;
             break;
         }
         case seek_left:
             ctl_in.behavior = controller::go;
             ctl_in.direction = controller::left;
+            ctl_in.speed = controller::slow;
             break;
         case seek_right:
             ctl_in.behavior = controller::go;
             ctl_in.direction = controller::right;
+            ctl_in.speed = controller::slow;
             break;
         case chase:
             ctl_in.behavior = controller::chase;
             ctl_in.direction = controller::straight;
+            ctl_in.speed = controller::super_fast;
             break;
         case critical_turn_left:
             ctl_in.behavior = controller::go;
             ctl_in.direction = controller::left;
+            ctl_in.speed = controller::fast;
             break;
         case critical_turn_right:
             ctl_in.behavior = controller::go;
             ctl_in.direction = controller::right;
+            ctl_in.speed = controller::fast;
             break;
         }
 
