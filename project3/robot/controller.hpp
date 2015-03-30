@@ -14,7 +14,7 @@ public:
     {
         wait,
         go,
-        approach,
+        chase,
         drive_forward,
         face_obstacle
     };

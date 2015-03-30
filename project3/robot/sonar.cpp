@@ -176,7 +176,7 @@ ISR(TIMER5_CAPT_vect)
     {
     case rising_edge:
     {
-        digitalWrite(13, HIGH);
+        //digitalWrite(13, HIGH);
 
         set_capture_edge(falling_edge);
         TIFR5 |= _BV(ICF5);
@@ -188,7 +188,7 @@ ISR(TIMER5_CAPT_vect)
     }
     case falling_edge:
     {
-        digitalWrite(13, LOW);
+        //digitalWrite(13, LOW);
 
         // Disable all interrupts
         TIMSK5 = 0;
@@ -215,7 +215,7 @@ ISR(TIMER5_COMPA_vect)
     // Disable all interrupts
     TIMSK5 = 0;
 
-    digitalWrite(13, LOW);
+    //digitalWrite(13, LOW);
 
     // Just publish a huge number
     Service_Publish(g_echo_service, TCNT5 - g_time);

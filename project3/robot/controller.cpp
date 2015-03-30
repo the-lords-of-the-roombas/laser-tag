@@ -42,6 +42,7 @@ void controller::run()
 
     for(;;)
     {
+#if 0
         {
             static bool on = true;
             if (on)
@@ -50,7 +51,7 @@ void controller::run()
                 digitalWrite(13, LOW);
             on = !on;
         }
-
+#endif
         // Read sensors
 
         acquire_sensors(m_sensors);
@@ -118,6 +119,7 @@ void controller::run()
         uint16_t prox_max = array_max(m_sensors.proximity, 6, &prox_max_idx);
         //int16_t prox_weights[] = { -60, -26, -8, 26, 50, 102 };
 
+        bool object_centered = false;
 
         // Compute controls
 
@@ -165,13 +167,14 @@ void controller::run()
 #endif
             break;
         }
-        case approach:
+        case chase:
         {
             if (prox_max > 50)
             {
                 // We are in close proximity of object
                 if (prox_max_idx == 2)
                 {
+                    object_centered = true;
                     // We have aimed right into the object
                 }
                 else
@@ -285,6 +288,7 @@ void controller::run()
                 m_sensors.proximity[3] > 50 ||
                 m_sensors.proximity[4] > 50 ||
                 m_sensors.proximity[5] > 50;
+        output.object_centered = object_centered;
 
         ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
         {

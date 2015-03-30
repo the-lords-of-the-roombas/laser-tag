@@ -39,6 +39,8 @@ void sequencer::run()
     uint16_t behavior_onset = Now();
     controller::direction_t last_turn = controller::left;
 
+    bool blink_led = false;
+
     for(;;)
     {
         Service_Publish(m_sonar_request, 0);
@@ -54,6 +56,8 @@ void sequencer::run()
 
         // Update environment variables
 
+        bool target_seen = sonar_cm < 50;
+
         ctl_in.sonar_cm = sonar_cm;
 
         // Select behavior
@@ -64,7 +68,11 @@ void sequencer::run()
         {
         case seek_straight:
         {
-            if (time - behavior_onset > 3000)
+            if (target_seen)
+            {
+                next_behavior = chase;
+            }
+            else if (time - behavior_onset > 3000)
             {
                 if (last_turn == controller::left)
                     next_behavior = seek_right;
@@ -91,8 +99,33 @@ void sequencer::run()
         case seek_left:
         case seek_right:
         {
-            if (time - behavior_onset > 300)
+            if (target_seen)
+            {
+                next_behavior = chase;
+            }
+            else if (time - behavior_onset > 300)
                 next_behavior = seek_straight;
+            break;
+        }
+        case chase:
+        {
+            if (!target_seen)
+            {
+                next_behavior = seek_right;
+            }
+            else if (ctl_out.object_centered)
+            {
+                blink_led = true;
+            }
+            else
+            {
+                blink_led = !blink_led;
+            }
+
+            if (blink_led)
+                digitalWrite(13, HIGH);
+            else
+                digitalWrite(13, LOW);
             break;
         }
         case critical_turn_right:
@@ -119,6 +152,11 @@ void sequencer::run()
             behavior_onset = time;
         }
 
+        if (behavior != chase)
+        {
+            digitalWrite(13, LOW);
+        }
+
         // Execute behavior
 
         switch(behavior)
@@ -136,6 +174,10 @@ void sequencer::run()
         case seek_right:
             ctl_in.behavior = controller::go;
             ctl_in.direction = controller::right;
+            break;
+        case chase:
+            ctl_in.behavior = controller::chase;
+            ctl_in.direction = controller::straight;
             break;
         case critical_turn_left:
             ctl_in.behavior = controller::go;
