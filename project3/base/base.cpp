@@ -56,6 +56,16 @@ int main()
                 break;
             case debug_packet_type:
             {
+                Serial.print("Behavior: ");
+                Serial.print(rx_pkt.debug.ctl_behavior);
+                Serial.println();
+
+                Serial.print("Sonar: ");
+                Serial.print(rx_pkt.debug.sonar_cm);
+                Serial.println();
+
+
+#if 0
                 Serial.print("Proximity:");
                 for (int i = 0; i < 3; ++i)
                 {
@@ -63,7 +73,7 @@ int main()
                     Serial.write(' ');
                 }
                 Serial.println();
-
+#endif
                 //Serial.print("P C = ");
                 //Serial.println(rx_pkt.debug.proximity_center);
 

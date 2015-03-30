@@ -14,6 +14,12 @@ public:
     void init(Service *request_service, Service *reply_service);
     int pin();
     void work();
+
+    static uint16_t cycles_to_cm(uint16_t cycles)
+    {
+        return ((uint32_t) cycles * SONAR_CLOCK_SCALE) / (58UL * 16UL);
+    }
+
 private:
     void speak();
     int listen();

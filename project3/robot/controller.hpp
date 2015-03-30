@@ -7,51 +7,63 @@
 
 namespace robot_tag_game {
 
-struct control_behavior
-{
-    enum types
-    {
-        wait,
-        drive_forward,
-        turn_right,
-        turn_left,
-        face_obstacle
-    };
-
-    types type;
-    uint16_t until;
-};
-
-struct sensor_data
-{
-    bool bump;
-    bool wheel_drop;
-    uint16_t proximity[6];
-};
-
-struct control_info
-{
-};
-
 class controller
 {
 public:
+    enum behavior_t
+    {
+        wait,
+        seek,
+        approach,
+        drive_forward,
+        face_obstacle
+    };
+
+    struct input_t
+    {
+        controller::behavior_t behavior;
+        uint16_t sonar_cm;
+        uint16_t sonar_cm_seek_threshold;
+    };
+
+    struct output_t
+    {
+        int behavior;
+        uint16_t sonar_cm;
+    };
+
     controller(irobot *robot,
-               control_behavior *behavior,
-               control_info *info_dst,
-               Service *info_service);
+               input_t *input,
+               output_t *output,
+               Service *out_service);
+
     // Must run in a periodic task:
     void run();
+
 private:
+    struct sensor_data
+    {
+        bool bump;
+        bool wheel_drop;
+        uint16_t proximity[6];
+    };
+
+    enum turn_direction
+    {
+        clockwise,
+        counter_clockwise
+    };
+
     void acquire_sensors(sensor_data & d);
     void drive(int16_t velocity, int16_t radius);
     void drive_straight(int16_t velocity);
     void drive_stop();
+    void turn(int16_t velocity, turn_direction );
 
     irobot *m_robot;
-    control_behavior *m_behavior_source;
-    control_info *m_info_dst;
-    Service *m_info_service;
+    input_t *m_input_src;
+    output_t *m_output_dst;
+    Service *m_output_service;
 
     sensor_data m_sensors;
 };

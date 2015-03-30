@@ -6,11 +6,12 @@
 namespace robot_tag_game {
 
 controller::controller
-(irobot *robot, control_behavior *behavior,
- control_info *info, Service *info_service):
+(irobot *robot, input_t *input, output_t *output,
+ Service *output_service):
     m_robot(robot),
-    m_behavior_source(behavior),
-    m_info_service(info_service)
+    m_input_src(input),
+    m_output_dst(output),
+    m_output_service(output_service)
 {}
 
 void controller::run()
@@ -20,8 +21,9 @@ void controller::run()
     int ghost_prox_left = 0;
     int past_target_found = 0;
 
-    control_behavior behavior;
-    control_info info;
+    input_t input;
+    output_t output;
+    output.sonar_cm = 0;
 
     for(;;)
     {
@@ -78,11 +80,14 @@ void controller::run()
 
         ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
         {
-            behavior = *m_behavior_source;
-            *m_info_dst = info;
+            input = *m_input_src;
+            *m_output_dst = output;
         }
 
-        Service_Publish(m_info_service, 0);
+        output.sonar_cm = input.sonar_cm;
+        output.behavior = input.behavior;
+
+        Service_Publish(m_output_service, 0);
 
 
         // Control
@@ -91,23 +96,43 @@ void controller::run()
         {
             drive_straight(-100);
         }
-        else if (ghost_prox_left)
-        {
-            drive(100, -1);
-        }
         else
         {
-            switch(behavior.type)
+            switch(input.behavior)
             {
-            case control_behavior::wait:
-            {
-                // stop:
-                drive_straight(0);
-                break;
-            }
-            case control_behavior::drive_forward:
+            case wait:
             {
                 drive_stop();
+                break;
+            }
+            case seek:
+            {
+                if (input.sonar_cm > input.sonar_cm_seek_threshold)
+                {
+                    turn(100, clockwise);
+                }
+                else
+                {
+                    drive_stop();
+                }
+                break;
+            }
+            case approach:
+            {
+                if (prox_max > 50)
+                    drive_stop();
+                else
+                    drive_straight(300);
+                break;
+            }
+            case drive_forward:
+            {
+                drive_stop();
+
+                if (ghost_prox_left)
+                {
+                    drive(100, -1);
+                }
 #if 0
                 int turn_direction = prox_left > prox_right ? -1 : 1;
 
@@ -131,7 +156,7 @@ void controller::run()
 #endif
                 break;
             }
-            case control_behavior::face_obstacle:
+            case face_obstacle:
             {
                 if (prox_max < 15)
                 {
@@ -301,6 +326,11 @@ void controller::drive_straight(int16_t velocity)
 void controller::drive_stop()
 {
     drive_straight(0);
+}
+
+void controller::turn(int16_t velocity, turn_direction dir )
+{
+    drive(velocity, dir == clockwise ? 1 : -1);
 }
 
 }
