@@ -44,7 +44,8 @@ public:
     struct output_t
     {
         output_t():
-            bump(false),
+            bump_left(false),
+            bump_right(false),
             object_left(false),
             object_right(false),
             object_centered(false)
@@ -56,7 +57,8 @@ public:
         //int obj_seek_trail;
         //int radius;
         //int last_direction;
-        bool bump;
+        bool bump_left;
+        bool bump_right;
         bool object_left;
         bool object_right;
         bool object_centered;
@@ -74,7 +76,8 @@ public:
 private:
     struct sensor_data
     {
-        bool bump;
+        bool bump_left;
+        bool bump_right;
         bool wheel_drop;
         uint16_t proximity[6];
     };
@@ -91,7 +94,8 @@ private:
     void drive_stop();
     void turn(int16_t velocity, turn_direction );
 
-    int16_t periods_from_ms( int16_t ms ) { return ms / m_period_ms; }
+    int periods_from_ms(int ms) { return ms / m_period_ms; }
+
     /*int16 mm_per_period( int16_t speed ) {
         return speed
         100 mm / 1000 ms;

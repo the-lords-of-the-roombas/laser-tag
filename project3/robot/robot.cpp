@@ -185,6 +185,11 @@ void report()
         radio_packet_t tx_packet;
         tx_packet.type = debug_packet_type;
 
+        tx_packet.debug.bump_left = ctl_out.bump_left;
+        tx_packet.debug.bump_right = ctl_out.bump_right;
+        tx_packet.debug.object_left = ctl_out.object_left;
+        tx_packet.debug.object_right = ctl_out.object_right;
+
 #if 0
         for (int i = 0; i < 3; ++i)
             tx_packet.debug.proximities[i] = g_sensors_derived.proximities[i];

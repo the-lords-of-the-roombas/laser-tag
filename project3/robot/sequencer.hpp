@@ -15,7 +15,8 @@ public:
         seek_straight,
         seek_left,
         seek_right,
-        critical_turn
+        critical_turn_left,
+        critical_turn_right
     };
 
     sequencer(controller::input_t *ctl_in,

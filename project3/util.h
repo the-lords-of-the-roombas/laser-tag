@@ -67,6 +67,80 @@ int centroid(const T *data, unsigned int count, T sum)
     return (weighted_idx * 100) / (sum * (count - 1));
 }
 
+template<typename T>
+T abs_dif(T a, T b)
+{
+    if (a > b)
+        return a - b;
+    else
+        return b - a;
+}
+
+template<typename T, unsigned int N>
+class variance_filter
+{
+public:
+    variance_filter()
+    {
+        for(int i = 0; i < N; ++i)
+            m_prev[i] = 0;
+        m_last = 0;
+        m_last_good = 0;
+        m_delay_idx = 0;
+    }
+
+    T operator()(T in, T & out_avg_dif, T & out_in_dif)
+    {
+        T sum = 0;
+        for (unsigned int i = 0; i < N-1; ++i)
+            sum += m_prev[i];
+        sum += m_last;
+        T avg = sum / N;
+
+        T avg_dif = 0;
+        {
+            unsigned int i, k;
+            unsigned int k_sum = 0;
+            for (i = m_delay_idx, k = 1; i < N-1; ++i, ++k)
+            {
+                avg_dif += abs_dif(m_prev[i], avg) * k;
+                k_sum += k;
+            }
+            for (i = 0; i < m_delay_idx; ++i, ++k)
+            {
+                avg_dif += abs_dif(m_prev[i], avg) * k;
+                k_sum += k;
+            }
+            avg_dif += abs_dif(m_last, avg) * k;
+            avg_dif /= k_sum;
+        }
+
+        T in_dif = abs_dif(in, avg);
+
+        T out;
+        if (in_dif <= 3 * avg_dif)
+            out = m_last_good = in;
+        else
+            out = m_last_good;
+
+        m_prev[m_delay_idx] = m_last;
+        m_last = in;
+        ++m_delay_idx;
+        if (m_delay_idx >= N-1)
+            m_delay_idx = 0;
+
+        out_avg_dif = avg_dif;
+        out_in_dif = in_dif;
+
+        return out;
+    }
+private:
+    T m_prev[N-1];
+    T m_last;
+    T m_last_good;
+    uint8_t m_delay_idx;
+};
+
 #define memory_barrier() asm volatile ("" ::: "memory")
 
 }

@@ -56,7 +56,7 @@ void sequencer::run()
 
         ctl_in.sonar_cm = sonar_cm;
 
-        // Update behavior
+        // Select behavior
 
         behavior_t next_behavior = behavior;
 
@@ -91,20 +91,27 @@ void sequencer::run()
         case seek_left:
         case seek_right:
         {
-            if (time - behavior_onset > 500)
+            if (time - behavior_onset > 300)
                 next_behavior = seek_straight;
             break;
         }
-        case critical_turn:
+        case critical_turn_right:
+        case critical_turn_left:
         {
-            if (time - behavior_onset > 1000)
+            if (time - behavior_onset > 500)
                 next_behavior = seek_straight;
             break;
         }
         }
 
-        if (ctl_out.bump)
-            next_behavior = critical_turn;
+        // Select critical behaviors if necessary
+
+        if (ctl_out.bump_left)
+            next_behavior = critical_turn_right;
+        else if (ctl_out.bump_right)
+            next_behavior = critical_turn_left;
+
+        // Switch to selected behavior
 
         if (next_behavior != behavior)
         {
@@ -130,9 +137,13 @@ void sequencer::run()
             ctl_in.behavior = controller::go;
             ctl_in.direction = controller::right;
             break;
-        case critical_turn:
+        case critical_turn_left:
             ctl_in.behavior = controller::go;
             ctl_in.direction = controller::left;
+            break;
+        case critical_turn_right:
+            ctl_in.behavior = controller::go;
+            ctl_in.direction = controller::right;
             break;
         }
 

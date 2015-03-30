@@ -58,6 +58,18 @@ int main()
             {
                 Serial.println("---");
 
+                Serial.print("Bumps: ");
+                Serial.print(rx_pkt.debug.bump_left);
+                Serial.print(" ");
+                Serial.print(rx_pkt.debug.bump_right);
+                Serial.println();
+
+                Serial.print("Object: ");
+                Serial.print(rx_pkt.debug.object_left);
+                Serial.print(" ");
+                Serial.print(rx_pkt.debug.object_right);
+                Serial.println();
+#if 0
                 Serial.print("Behavior: ");
                 Serial.print(rx_pkt.debug.ctl_behavior);
                 Serial.println();
@@ -75,7 +87,7 @@ int main()
                 Serial.println(rx_pkt.debug.last_dir);
                 Serial.print("Radius: ");
                 Serial.println(rx_pkt.debug.radius);
-
+#endif
 
 
 

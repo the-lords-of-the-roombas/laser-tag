@@ -8,15 +8,21 @@ enum local_packet_types
 struct debug_payload
 {
     int16_t test;
-
+#if 0
     int16_t ctl_behavior;
     int16_t obj_motion;
     int16_t obj_seek;
     int16_t radius;
     int16_t last_dir;
+#endif
 
+#if 0
     uint16_t sonar_cm;
-    //uint16_t proximity[6];
-    //int16_t proximity_center;
     float proximities[3];
+#endif
+
+    bool bump_left;
+    bool bump_right;
+    bool object_left;
+    bool object_right;
 };

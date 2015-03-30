@@ -15,7 +15,7 @@ controller::controller
     m_period_ms(period_ms)
 {}
 
-static int16_t trail_filter(int16_t v)
+static int trail_filter(int v)
 {
     if (v > 0)
         return v - 1;
@@ -27,8 +27,8 @@ static int16_t trail_filter(int16_t v)
 
 void controller::run()
 {
-    uint8_t back_up_time = 0;
-    uint8_t ban_travel_time = 0;
+    int back_up_time = 0;
+    int ban_travel_time = 0;
 
     int last_direction = 0;
     int object_motion_trail = 0;
@@ -70,12 +70,18 @@ void controller::run()
 
         // Compute environment
 
-        back_up_time = m_sensors.bump
+        bool bumped = m_sensors.bump_left || m_sensors.bump_right;
+
+        back_up_time = bumped
                 ? periods_from_ms(250)
                 : trail_filter(back_up_time);
-        ban_travel_time = m_sensors.bump
-                ? periods_from_ms(1500)
-                : trail_filter(ban_travel_time);
+
+        if (bumped)
+            ban_travel_time =
+                    (m_sensors.bump_left && !m_sensors.bump_right)
+                    ? (-periods_from_ms(1500)) : periods_from_ms(1500);
+        else
+            ban_travel_time = trail_filter(ban_travel_time);
 
         bool object_seen = input.sonar_cm <= input.sonar_cm_seek_threshold;
         bool object_disappeared = !object_seen && object_last_seen;
@@ -269,7 +275,8 @@ void controller::run()
         output.radius = radius;
         output.last_direction = last_direction;
 */
-        output.bump = ban_travel_time > 0;
+        output.bump_left = ban_travel_time < 0;
+        output.bump_right = ban_travel_time > 0;
         output.object_left =
                 m_sensors.proximity[0] > 50 ||
                 m_sensors.proximity[1] > 50 ||
@@ -348,7 +355,9 @@ void controller::acquire_sensors(sensor_data & d)
     m_robot->receive(raw_proxim_r, 2);
 
     d.wheel_drop = raw_bumps_and_wheel_drops & (_BV(3) | _BV(2));
-    d.bump = raw_bumps_and_wheel_drops & (_BV(1) | _BV(0));
+    d.bump_left = raw_bumps_and_wheel_drops & _BV(1);
+    d.bump_right = raw_bumps_and_wheel_drops & _BV(0);
+
     d.proximity[0] = bytes_to_int16(raw_proxim_l);
     d.proximity[1] = bytes_to_int16(raw_proxim_lf);
     d.proximity[2] = bytes_to_int16(raw_proxim_lc);
