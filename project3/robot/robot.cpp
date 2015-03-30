@@ -188,14 +188,14 @@ void report()
 #if 0
         for (int i = 0; i < 3; ++i)
             tx_packet.debug.proximities[i] = g_sensors_derived.proximities[i];
-#endif
+
         tx_packet.debug.ctl_behavior = ctl_out.behavior;
         tx_packet.debug.sonar_cm = ctl_out.sonar_cm;
         tx_packet.debug.obj_motion = ctl_out.obj_motion_trail;
         tx_packet.debug.obj_seek = ctl_out.obj_seek_trail;
         tx_packet.debug.radius = ctl_out.radius;
         tx_packet.debug.last_dir = ctl_out.last_direction;
-
+#endif
         Radio_Transmit(&tx_packet, RADIO_WAIT_FOR_TX);
 
         // Clear receive buffer
@@ -272,11 +272,7 @@ int r_main()
         delay(300);
     }
 
-    // Init controller
-
-    g_ctl_in.behavior = controller::wait;
-    g_ctl_in.sonar_cm = 0;
-    g_ctl_in.sonar_cm_seek_threshold = 0;
+    // Make sure all shared memory initialization is finished.
 
     memory_barrier();
 

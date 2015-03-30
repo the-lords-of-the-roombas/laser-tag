@@ -12,8 +12,10 @@ class sequencer
 public:
     enum behavior_t
     {
-        seek,
-        seek_left
+        seek_straight,
+        seek_left,
+        seek_right,
+        critical_turn
     };
 
     sequencer(controller::input_t *ctl_in,

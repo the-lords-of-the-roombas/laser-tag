@@ -27,8 +27,8 @@ static int16_t trail_filter(int16_t v)
 
 void controller::run()
 {
-    int collision_ahead_trail = 0;
-    int collision_left_trail = 0;
+    uint8_t back_up_time = 0;
+    uint8_t ban_travel_time = 0;
 
     int last_direction = 0;
     int object_motion_trail = 0;
@@ -37,7 +37,6 @@ void controller::run()
 
     input_t input;
     output_t output;
-    output.sonar_cm = 0;
 
     static const int object_seek_len = 2000 / m_period_ms;
 
@@ -71,8 +70,12 @@ void controller::run()
 
         // Compute environment
 
-        collision_ahead_trail = m_sensors.bump ? 10 : trail_filter(collision_ahead_trail);
-        collision_left_trail = m_sensors.bump ? 40 : trail_filter(collision_left_trail);
+        back_up_time = m_sensors.bump
+                ? periods_from_ms(250)
+                : trail_filter(back_up_time);
+        ban_travel_time = m_sensors.bump
+                ? periods_from_ms(1500)
+                : trail_filter(ban_travel_time);
 
         bool object_seen = input.sonar_cm <= input.sonar_cm_seek_threshold;
         bool object_disappeared = !object_seen && object_last_seen;
@@ -115,117 +118,139 @@ void controller::run()
         int16_t velocity = 0;
         int16_t radius = 0;
 
-        if (collision_ahead_trail)
+        switch(input.behavior)
         {
-            velocity = -100;
+        case wait:
+        {
+            break;
         }
-        else
+        case go:
         {
-            switch(input.behavior)
+            if (input.direction != straight)
             {
-            case wait:
-            {
-                break;
+                velocity = 300;
+                radius = input.direction == left ? 1 : -1;
             }
-            case seek:
+            else if (prox_max < 50)
             {
-                if (object_seen)
-                {
-                    // stop
-                }
-                else if (expected_object_direction)
-                {
-                    velocity = 200;
-                    radius = expected_object_direction > 0 ? 1 : -1;
-                }
-                else
-                {
-                    velocity = 100;
-                    radius = 1;
-                }
-
-                break;
+                velocity = 300;
             }
-            case approach:
+            else
             {
-                if (prox_max > 50)
-                {
-                    // We are in close proximity of object
-                    if (prox_max_idx == 2)
-                    {
-                        // We have aimed right into the object
-                    }
-                    else
-                    {
-                        // Turn towards the object
-                        velocity = 100;
-                        radius =  prox_max_idx < 2 ? 1 : -1;
-                    }
-                }
-                else
-                {
-                    velocity = 300;
-                }
-                break;
+                // We are not turning,
+                // and we are in close proximity of an object.
+                // Stop.
             }
-            case drive_forward:
-            {
 #if 0
-                drive_stop();
-
-                if (collision_left_trail)
-                {
-                    drive(100, -1);
-                }
-
-                int turn_direction = prox_left > prox_right ? -1 : 1;
-
-                if (prox_left > 10 || prox_right > 10 || prox_center > 10)
-                {
-                    // Rotate away from obstacle
-                    int velocity = 100;
-                    drive(g_robot, velocity, turn_direction);
-                }
-                else if (prox_left > 0 || prox_right > 0 || prox_center > 0)
-                {
-                    // Veer away from obstacle
-                    int velocity = 100;
-                    int radius = turn_direction * 100;
-                    drive(g_robot, velocity, radius);
-                }
-                else
-                {
-                    drive_straight(g_robot, 300);
-                }
+            if (object_seen)
+            {
+                // stop
+            }
+            else if (expected_object_direction)
+            {
+                velocity = 200;
+                radius = expected_object_direction > 0 ? 1 : -1;
+            }
+            else
+            {
+                velocity = 100;
+                radius = 1;
+            }
 #endif
-                break;
-            }
-            case face_obstacle:
+            break;
+        }
+        case approach:
+        {
+            if (prox_max > 50)
             {
+                // We are in close proximity of object
+                if (prox_max_idx == 2)
+                {
+                    // We have aimed right into the object
+                }
+                else
+                {
+                    // Turn towards the object
+                    velocity = 100;
+                    radius =  prox_max_idx < 2 ? 1 : -1;
+                }
+            }
+            else
+            {
+                velocity = 300;
+            }
+            break;
+        }
+        case drive_forward:
+        {
 #if 0
-                if (prox_max < 15)
+            drive_stop();
+
+            if (collision_left_trail)
+            {
+                drive(100, -1);
+            }
+
+            int turn_direction = prox_left > prox_right ? -1 : 1;
+
+            if (prox_left > 10 || prox_right > 10 || prox_center > 10)
+            {
+                // Rotate away from obstacle
+                int velocity = 100;
+                drive(g_robot, velocity, turn_direction);
+            }
+            else if (prox_left > 0 || prox_right > 0 || prox_center > 0)
+            {
+                // Veer away from obstacle
+                int velocity = 100;
+                int radius = turn_direction * 100;
+                drive(g_robot, velocity, radius);
+            }
+            else
+            {
+                drive_straight(g_robot, 300);
+            }
+#endif
+            break;
+        }
+        case face_obstacle:
+        {
+#if 0
+            if (prox_max < 15)
+            {
+                drive_stop();
+            }
+            else
+            {
+                if (prox_max_idx == 2)
                 {
                     drive_stop();
                 }
                 else
                 {
-                    if (prox_max_idx == 2)
-                    {
-                        drive_stop();
-                    }
-                    else
-                    {
-                        int turn_direction = prox_max_idx < 2 ? 1 : -1;
-                        drive(100, turn_direction);
-                    }
+                    int turn_direction = prox_max_idx < 2 ? 1 : -1;
+                    drive(100, turn_direction);
                 }
+            }
 #endif
-                break;
-            }
-            default:
-                m_robot->stop();
-                OS_Abort();
-            }
+            break;
+        }
+        default:
+            m_robot->stop();
+            OS_Abort();
+        }
+
+        // Override
+
+        if(back_up_time)
+        {
+            radius = 0;
+            velocity = -100;
+        }
+        else if (ban_travel_time || prox_max > 50)
+        {
+            if (radius != 1 && radius != -1)
+                velocity = 0;
         }
 
         // Apply
@@ -236,13 +261,23 @@ void controller::run()
             drive(velocity, radius);
 
         // Output
-
+/*
         output.sonar_cm = input.sonar_cm;
         output.behavior = input.behavior;
         output.obj_motion_trail = object_motion_trail;
         output.obj_seek_trail = object_seek_trail;
         output.radius = radius;
         output.last_direction = last_direction;
+*/
+        output.bump = ban_travel_time > 0;
+        output.object_left =
+                m_sensors.proximity[0] > 50 ||
+                m_sensors.proximity[1] > 50 ||
+                m_sensors.proximity[2] > 50;
+        output.object_right =
+                m_sensors.proximity[3] > 50 ||
+                m_sensors.proximity[4] > 50 ||
+                m_sensors.proximity[5] > 50;
 
         ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
         {

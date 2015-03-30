@@ -13,34 +13,53 @@ public:
     enum behavior_t
     {
         wait,
-        seek,
+        go,
         approach,
         drive_forward,
         face_obstacle
     };
 
-    enum direction
+    enum direction_t
     {
+        straight = 0,
         left,
         right
     };
 
     struct input_t
     {
+        input_t():
+            behavior(wait),
+            direction(straight),
+            sonar_cm(0),
+            sonar_cm_seek_threshold(0)
+        {}
+
         controller::behavior_t behavior;
+        direction_t direction;
         uint16_t sonar_cm;
         uint16_t sonar_cm_seek_threshold;
-        direction seek_direction;
     };
 
     struct output_t
     {
-        int behavior;
-        uint16_t sonar_cm;
-        int obj_motion_trail;
-        int obj_seek_trail;
-        int radius;
-        int last_direction;
+        output_t():
+            bump(false),
+            object_left(false),
+            object_right(false),
+            object_centered(false)
+        {}
+
+        //int behavior;
+        //uint16_t sonar_cm;
+        //int obj_motion_trail;
+        //int obj_seek_trail;
+        //int radius;
+        //int last_direction;
+        bool bump;
+        bool object_left;
+        bool object_right;
+        bool object_centered;
     };
 
     controller(irobot *robot,
@@ -71,6 +90,15 @@ private:
     void drive_straight(int16_t velocity);
     void drive_stop();
     void turn(int16_t velocity, turn_direction );
+
+    int16_t periods_from_ms( int16_t ms ) { return ms / m_period_ms; }
+    /*int16 mm_per_period( int16_t speed ) {
+        return speed
+        100 mm / 1000 ms;
+
+        // (100 / 1000) mm/ms == (100 * period_ms) / 1000
+
+    }*/
 
     irobot *m_robot;
     input_t *m_input_src;
