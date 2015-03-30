@@ -62,14 +62,17 @@ void sequencer::run()
         case controller::wait:
         {
             ctl_in.behavior = controller::seek;
+            ctl_in.seek_direction = controller::left;
             break;
         }
         case controller::seek:
         {
+#if 1
             if (sonar_cm <= ctl_in.sonar_cm_seek_threshold)
             {
                 ctl_in.behavior = controller::approach;
             }
+#endif
             break;
         }
         case controller::approach:

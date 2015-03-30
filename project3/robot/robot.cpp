@@ -24,6 +24,7 @@ enum navigation_state
 
 static uint8_t radio_base_address[5] = BASE_RADIO_ADDRESS;
 static uint8_t radio_robot0_address[5] = ROBOT_0_RADIO_ADDRESS;
+static uint16_t volatile control_period_ticks = 5;
 
 extern "C" {
 void radio_rxhandler(uint8_t pipenumber)
@@ -161,7 +162,8 @@ void sequence()
 
 void control()
 {
-    controller ctl(&g_robot, &g_ctl_in, &g_ctl_out, g_ctl_out_service);
+    controller ctl(&g_robot, &g_ctl_in, &g_ctl_out, g_ctl_out_service,
+                   control_period_ticks * TICK);
     ctl.run();
 }
 
@@ -189,6 +191,10 @@ void report()
 #endif
         tx_packet.debug.ctl_behavior = ctl_out.behavior;
         tx_packet.debug.sonar_cm = ctl_out.sonar_cm;
+        tx_packet.debug.obj_motion = ctl_out.obj_motion_trail;
+        tx_packet.debug.obj_seek = ctl_out.obj_seek_trail;
+        tx_packet.debug.radius = ctl_out.radius;
+        tx_packet.debug.last_dir = ctl_out.last_direction;
 
         Radio_Transmit(&tx_packet, RADIO_WAIT_FOR_TX);
 
@@ -282,7 +288,7 @@ int r_main()
 
     Task_Create_RR(sequence, 0);
 
-    Task_Create_Periodic(control, 0, 5, 5, 0);
+    Task_Create_Periodic(control, 0, control_period_ticks, control_period_ticks, 0);
 
     Task_Periodic_Start();
 

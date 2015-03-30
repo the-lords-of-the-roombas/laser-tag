@@ -56,6 +56,8 @@ int main()
                 break;
             case debug_packet_type:
             {
+                Serial.println("---");
+
                 Serial.print("Behavior: ");
                 Serial.print(rx_pkt.debug.ctl_behavior);
                 Serial.println();
@@ -63,6 +65,18 @@ int main()
                 Serial.print("Sonar: ");
                 Serial.print(rx_pkt.debug.sonar_cm);
                 Serial.println();
+
+                Serial.print("Seeking: ");
+                Serial.print(rx_pkt.debug.obj_motion);
+                Serial.print(" ");
+                Serial.println(rx_pkt.debug.obj_seek);
+
+                Serial.print("Last dir: ");
+                Serial.println(rx_pkt.debug.last_dir);
+                Serial.print("Radius: ");
+                Serial.println(rx_pkt.debug.radius);
+
+
 
 
 #if 0

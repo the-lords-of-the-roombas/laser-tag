@@ -7,23 +7,39 @@ namespace robot_tag_game {
 
 controller::controller
 (irobot *robot, input_t *input, output_t *output,
- Service *output_service):
+ Service *output_service, uint16_t period_ms):
     m_robot(robot),
     m_input_src(input),
     m_output_dst(output),
-    m_output_service(output_service)
+    m_output_service(output_service),
+    m_period_ms(period_ms)
 {}
+
+static int16_t trail_filter(int16_t v)
+{
+    if (v > 0)
+        return v - 1;
+    else if (v < 0)
+        return v + 1;
+    else
+        return v;
+}
 
 void controller::run()
 {
-    int past_back_up = 0;
-    //float past_prox_center = 0.0;
-    int ghost_prox_left = 0;
-    int past_target_found = 0;
+    int collision_ahead_trail = 0;
+    int collision_left_trail = 0;
+
+    int last_direction = 0;
+    int object_motion_trail = 0;
+    int object_seek_trail = 0;
+    bool object_last_seen = false;
 
     input_t input;
     output_t output;
     output.sonar_cm = 0;
+
+    static const int object_seek_len = 2000 / m_period_ms;
 
     for(;;)
     {
@@ -36,6 +52,8 @@ void controller::run()
             on = !on;
         }
 
+        // Read sensors
+
         acquire_sensors(m_sensors);
 
         if (m_sensors.wheel_drop)
@@ -44,57 +62,62 @@ void controller::run()
             OS_Abort();
         }
 
-        // Update past
-
-        past_back_up = max(past_back_up - 1, 0);
-        past_target_found = max(past_target_found - 1, 0);
-        ghost_prox_left = max(ghost_prox_left - 1, 0);
-
-        // Compute
-
-        if(m_sensors.bump)
-        {
-            past_back_up = 10;
-            ghost_prox_left = 40;
-        }
-
-        uint16_t prox_max_idx = 0;
-        uint16_t prox_max = array_max(m_sensors.proximity, 6, &prox_max_idx);
-        uint16_t prox_sum = sum(m_sensors.proximity, 6);
-        //uint16_t prox_sum_left = sum(m_sensors.proximity, 3);
-        //uint16_t prox_sum_right = sum(m_sensors.proximity + 3, 3);
-
-        int16_t prox_weights[] = { -60, -26, -8, 26, 50, 102 };
-
-        //float prox_left = proximity_to_target(-100, prox_weights, m_sensors.proximity, 6);
-        //float prox_right = proximity_to_target(100, prox_weights, m_sensors.proximity, 6);
-        //float prox_center = proximity_to_target(0, prox_weights, m_sensors.proximity, 6);
-        //prox_left += ghost_prox_left;
-
-        // Exchange data
-
-        //g_sensors_derived.proximity_center = prox_center;
-        //g_sensors_derived.proximities[0] = prox_left;
-        //g_sensors_derived.proximities[1] = prox_center;
-        //g_sensors_derived.proximities[2] = prox_right;
+        // Get input
 
         ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
         {
             input = *m_input_src;
-            *m_output_dst = output;
         }
 
-        output.sonar_cm = input.sonar_cm;
-        output.behavior = input.behavior;
+        // Compute environment
 
-        Service_Publish(m_output_service, 0);
+        collision_ahead_trail = m_sensors.bump ? 10 : trail_filter(collision_ahead_trail);
+        collision_left_trail = m_sensors.bump ? 40 : trail_filter(collision_left_trail);
 
+        bool object_seen = input.sonar_cm <= input.sonar_cm_seek_threshold;
+        bool object_disappeared = !object_seen && object_last_seen;
+        object_last_seen = object_seen;
 
-        // Control
+        if (object_seen && last_direction != 0)
+            object_motion_trail = last_direction * 150;
+        else
+            object_motion_trail = trail_filter(object_motion_trail);
 
-        if (past_back_up)
+        if (object_disappeared && object_motion_trail != 0)
         {
-            drive_straight(-100);
+            if (object_motion_trail > 0)
+                object_seek_trail = object_seek_len;
+            else
+                object_seek_trail = -object_seek_len;
+        }
+        else
+        {
+            object_seek_trail = trail_filter(object_seek_trail);
+        }
+
+        int expected_object_direction = 0;
+        if (object_seek_trail > 3 * object_seek_len / 4 )
+            expected_object_direction = 1;
+        else if (object_seek_trail > 0)
+            expected_object_direction = -1;
+        else if (object_seek_trail < -3 * object_seek_len / 4)
+            expected_object_direction = -1;
+        else if (object_seek_trail < 0)
+            expected_object_direction = 1;
+
+        uint16_t prox_max_idx = 0;
+        uint16_t prox_max = array_max(m_sensors.proximity, 6, &prox_max_idx);
+        //int16_t prox_weights[] = { -60, -26, -8, 26, 50, 102 };
+
+
+        // Compute controls
+
+        int16_t velocity = 0;
+        int16_t radius = 0;
+
+        if (collision_ahead_trail)
+        {
+            velocity = -100;
         }
         else
         {
@@ -102,38 +125,59 @@ void controller::run()
             {
             case wait:
             {
-                drive_stop();
                 break;
             }
             case seek:
             {
-                if (input.sonar_cm > input.sonar_cm_seek_threshold)
+                if (object_seen)
                 {
-                    turn(100, clockwise);
+                    // stop
+                }
+                else if (expected_object_direction)
+                {
+                    velocity = 200;
+                    radius = expected_object_direction > 0 ? 1 : -1;
                 }
                 else
                 {
-                    drive_stop();
+                    velocity = 100;
+                    radius = 1;
                 }
+
                 break;
             }
             case approach:
             {
                 if (prox_max > 50)
-                    drive_stop();
+                {
+                    // We are in close proximity of object
+                    if (prox_max_idx == 2)
+                    {
+                        // We have aimed right into the object
+                    }
+                    else
+                    {
+                        // Turn towards the object
+                        velocity = 100;
+                        radius =  prox_max_idx < 2 ? 1 : -1;
+                    }
+                }
                 else
-                    drive_straight(300);
+                {
+                    velocity = 300;
+                }
                 break;
             }
             case drive_forward:
             {
+#if 0
                 drive_stop();
 
-                if (ghost_prox_left)
+                if (collision_left_trail)
                 {
                     drive(100, -1);
                 }
-#if 0
+
                 int turn_direction = prox_left > prox_right ? -1 : 1;
 
                 if (prox_left > 10 || prox_right > 10 || prox_center > 10)
@@ -158,6 +202,7 @@ void controller::run()
             }
             case face_obstacle:
             {
+#if 0
                 if (prox_max < 15)
                 {
                     drive_stop();
@@ -173,43 +218,47 @@ void controller::run()
                         int turn_direction = prox_max_idx < 2 ? 1 : -1;
                         drive(100, turn_direction);
                     }
-#if 0
-                    int turn_direction = prox_left > prox_right ? 1 : -1;
-
-                    if (past_target_found)
-                    {
-                        drive_stop(g_robot);
-                    }
-                    else if ( prox_center < prox_left || prox_center < prox_right )
-                    {
-                        drive(g_robot, 100, turn_direction);
-                    }
-                    else
-                    {
-                        // maximize
-                        if (prox_center > past_prox_center)
-                        {
-                            drive(g_robot, 100, turn_direction);
-                        }
-                        else
-                        {
-                            past_target_found = 100;
-                            drive_stop(g_robot);
-                        }
-                    }
-#endif
                 }
+#endif
                 break;
             }
             default:
                 m_robot->stop();
                 OS_Abort();
             }
-
-            // Update past
-
-            //past_prox_center = prox_center;
         }
+
+        // Apply
+
+        if (radius == 0)
+            drive_straight(velocity);
+        else
+            drive(velocity, radius);
+
+        // Output
+
+        output.sonar_cm = input.sonar_cm;
+        output.behavior = input.behavior;
+        output.obj_motion_trail = object_motion_trail;
+        output.obj_seek_trail = object_seek_trail;
+        output.radius = radius;
+        output.last_direction = last_direction;
+
+        ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
+        {
+            *m_output_dst = output;
+        }
+
+        Service_Publish(m_output_service, 0);
+
+        // Update past
+
+        if (radius > 0)
+            last_direction = 1;
+        else if (radius < 0)
+            last_direction = -1;
+        else
+            last_direction = 0;
 
         Task_Next();
     }

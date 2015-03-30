@@ -10,6 +10,12 @@ namespace robot_tag_game {
 class sequencer
 {
 public:
+    enum behavior_t
+    {
+        seek,
+        seek_left
+    };
+
     sequencer(controller::input_t *ctl_in,
               controller::output_t *ctl_out,
               Service *sonar_request,

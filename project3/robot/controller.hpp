@@ -19,23 +19,35 @@ public:
         face_obstacle
     };
 
+    enum direction
+    {
+        left,
+        right
+    };
+
     struct input_t
     {
         controller::behavior_t behavior;
         uint16_t sonar_cm;
         uint16_t sonar_cm_seek_threshold;
+        direction seek_direction;
     };
 
     struct output_t
     {
         int behavior;
         uint16_t sonar_cm;
+        int obj_motion_trail;
+        int obj_seek_trail;
+        int radius;
+        int last_direction;
     };
 
     controller(irobot *robot,
                input_t *input,
                output_t *output,
-               Service *out_service);
+               Service *out_service,
+               uint16_t period_ms);
 
     // Must run in a periodic task:
     void run();
@@ -64,6 +76,7 @@ private:
     input_t *m_input_src;
     output_t *m_output_dst;
     Service *m_output_service;
+    uint16_t m_period_ms;
 
     sensor_data m_sensors;
 };
