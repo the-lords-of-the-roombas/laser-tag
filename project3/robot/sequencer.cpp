@@ -136,7 +136,7 @@ void sequencer::run()
         case critical_turn_right:
         case critical_turn_left:
         {
-            if (time - behavior_onset > 500)
+            if (time - behavior_onset > 300)
                 next_behavior = seek_straight;
             break;
         }
