@@ -40,8 +40,9 @@ void sequencer::run()
 
     behavior_t behavior = seek_straight;
     uint16_t behavior_onset = Now();
-    //controller::direction_t last_turn = controller::left;
+
     uint16_t seek_direction_time = 3000;
+    behavior_t last_turn_behavior = seek_left;
     //controller::direction_t seek_direction;
 
     bool blink_led = false;
@@ -82,11 +83,20 @@ void sequencer::run()
             {
                 seek_direction_time = (uint16_t) random_uint8(TCNT1) * 10 + 2000;
 
-                coin = coin_flip(TCNT1);
+                // 1/4 chance true
+                coin = (random_uint8(TCNT1) & 0xFF) < 64;
+
                 if (coin)
-                    next_behavior = seek_right;
+                    next_behavior = last_turn_behavior;
                 else
-                    next_behavior = seek_left;
+                {
+                    if (last_turn_behavior == seek_left)
+                        next_behavior = seek_right;
+                    else
+                        next_behavior = seek_left;
+                }
+
+                last_turn_behavior = next_behavior;
             }
             else if (ctl_out.object_left || ctl_out.object_right)
             {
