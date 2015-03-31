@@ -17,5 +17,5 @@ target_link_libraries(test-radio radio rtos arduino)
 
 ## Robot
 
-add_arduino_executable(robot robot.cpp controller.cpp sequencer.cpp sonar.cpp)
+add_arduino_executable(robot robot.cpp controller.cpp sequencer.cpp sonar.cpp gun.cpp)
 target_link_libraries(robot radio irobot rtos arduino)

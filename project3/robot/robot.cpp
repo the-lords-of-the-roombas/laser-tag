@@ -1,6 +1,7 @@
 #include "controller.hpp"
 #include "sequencer.hpp"
 #include "sonar.hpp"
+#include "gun.hpp"
 #include "../world.hpp"
 #include "../arduino_config.h"
 #include "../util.h"
@@ -36,6 +37,10 @@ void radio_rxhandler(uint8_t pipenumber)
 
 Service * volatile g_sonar_request_service = 0;
 Service * volatile g_sonar_reply_service = 0;
+
+// Gun
+
+gun g_gun;
 
 // Control
 
@@ -163,7 +168,7 @@ void sequence()
 
 void control()
 {
-    controller ctl(&g_robot, &g_ctl_in, &g_ctl_out, g_ctl_out_service,
+    controller ctl(&g_robot, &g_gun, &g_ctl_in, &g_ctl_out, g_ctl_out_service,
                    control_period_ticks * TICK);
     ctl.run();
 }
@@ -257,6 +262,10 @@ int r_main()
 
     g_sonar_request_service = Service_Init();
     g_sonar_reply_service = Service_Init();
+
+    // Init gun
+
+    g_gun.init();
 
     // Init robot
 

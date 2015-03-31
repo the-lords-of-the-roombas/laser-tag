@@ -1,6 +1,7 @@
 #ifndef ROBOT_TAG_GAME_CONTROLLER_INCLUDED
 #define ROBOT_TAG_GAME_CONTROLLER_INCLUDED
 
+#include "gun.hpp"
 #include "../irobot/irobot.hpp"
 #include "../rtos/os.h"
 #include <stdint.h>
@@ -15,6 +16,7 @@ public:
         wait,
         go,
         chase,
+        shoot,
         drive_forward,
         face_obstacle
     };
@@ -71,9 +73,11 @@ public:
         bool object_left;
         bool object_right;
         bool object_centered;
+        bool done_shooting;
     };
 
     controller(irobot *robot,
+               gun *,
                input_t *input,
                output_t *output,
                Service *out_service,
@@ -114,6 +118,7 @@ private:
     }*/
 
     irobot *m_robot;
+    gun *m_gun;
     input_t *m_input_src;
     output_t *m_output_dst;
     Service *m_output_service;

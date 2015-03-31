@@ -134,6 +134,7 @@ void sequencer::run()
             }
             else if (ctl_out.object_centered)
             {
+                next_behavior = shoot;
                 blink_led = true;
             }
             else
@@ -141,10 +142,18 @@ void sequencer::run()
                 blink_led = !blink_led;
             }
 
-            if (blink_led)
+            /*if (blink_led)
                 digitalWrite(13, HIGH);
             else
-                digitalWrite(13, LOW);
+                digitalWrite(13, LOW);*/
+            break;
+        }
+        case shoot:
+        {
+            if (ctl_out.done_shooting)
+            {
+                next_behavior = critical_turn_right;
+            }
             break;
         }
         case critical_turn_right:
@@ -173,7 +182,7 @@ void sequencer::run()
 
         if (behavior != chase)
         {
-            digitalWrite(13, LOW);
+            //digitalWrite(13, LOW);
         }
 
         // Execute behavior
@@ -202,6 +211,11 @@ void sequencer::run()
             ctl_in.direction = controller::straight;
             ctl_in.speed = controller::super_fast;
             break;
+        case shoot:
+        {
+            ctl_in.behavior = controller::shoot;
+            break;
+        }
         case critical_turn_left:
             ctl_in.behavior = controller::go;
             ctl_in.direction = controller::left;

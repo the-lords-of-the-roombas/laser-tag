@@ -6,9 +6,10 @@
 namespace robot_tag_game {
 
 controller::controller
-(irobot *robot, input_t *input, output_t *output,
+(irobot *robot, gun *g, input_t *input, output_t *output,
  Service *output_service, uint16_t period_ms):
     m_robot(robot),
+    m_gun(g),
     m_input_src(input),
     m_output_dst(output),
     m_output_service(output_service),
@@ -34,6 +35,8 @@ void controller::run()
     int object_motion_trail = 0;
     int object_seek_trail = 0;
     bool object_last_seen = false;
+    bool was_shooting = false;
+    int shooting_phase = 0;
 
     input_t input;
     output_t output;
@@ -136,6 +139,11 @@ void controller::run()
             requested_velocity = 0; break;
         }
 
+        if (!was_shooting && input.behavior == shoot)
+            shooting_phase = 5;
+        else
+            shooting_phase = trail_filter(shooting_phase);
+
         // Compute controls
 
         int16_t velocity = 0;
@@ -203,6 +211,19 @@ void controller::run()
             else
             {
                 velocity = requested_velocity;
+            }
+            break;
+        }
+        case shoot:
+        {
+            if (shooting_phase == 5)
+            {
+                //digitalWrite(13, HIGH);
+                m_gun->send('x');
+            }
+            else
+            {
+                //digitalWrite(13, LOW);
             }
             break;
         }
@@ -278,6 +299,11 @@ void controller::run()
                 velocity = 0;
         }
 
+#if 0
+        // Kill movement for debugging purposes:
+        velocity = 0;
+        radius = 0;
+#endif
         // Apply
 
         if (radius == 0)
@@ -305,6 +331,7 @@ void controller::run()
                 m_sensors.proximity[4] > 50 ||
                 m_sensors.proximity[5] > 50;
         output.object_centered = object_centered;
+        output.done_shooting = input.behavior == shoot && shooting_phase == 0;
 
         ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
         {
@@ -321,6 +348,8 @@ void controller::run()
             last_direction = -1;
         else
             last_direction = 0;
+
+        was_shooting = input.behavior == shoot;
 
         Task_Next();
     }

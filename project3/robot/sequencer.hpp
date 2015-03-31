@@ -16,6 +16,7 @@ public:
         seek_left,
         seek_right,
         chase,
+        shoot,
         critical_turn_left,
         critical_turn_right
     };

@@ -1,5 +1,6 @@
 #include "gun.hpp"
 #include "../rtos/os.h"
+#include "../arduino_config.h"
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/atomic.h>
@@ -35,7 +36,7 @@ void gun::init()
 
     g = this;
 
-    pinMode(3, OUTPUT);
+    pinMode(arduino::pin_ir_emit, OUTPUT);
 
     // Clear control registers
     TCCR3A = 0;
@@ -122,7 +123,12 @@ void gun::next_tick()
     }
 
     if (bit_idx > 7)
+    {
+        //digitalWrite(13, LOW);
         return;
+    }
+
+    //digitalWrite(13, HIGH);
 
     if (bit_idx < 0)
     {
