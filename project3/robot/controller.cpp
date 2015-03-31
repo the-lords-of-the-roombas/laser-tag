@@ -122,21 +122,6 @@ void controller::run()
 
         bool object_centered = false;
 
-        int16_t requested_velocity;
-        switch(input.speed)
-        {
-        case super_fast:
-            requested_velocity = 400; break;
-        case fast:
-            requested_velocity = 300; break;
-        case slow:
-            requested_velocity = 200; break;
-        case super_slow:
-            requested_velocity = 100; break;
-        default:
-            requested_velocity = 0; break;
-        }
-
         if (!was_shooting && input.behavior == shoot)
             shooting_phase = 5;
         else
@@ -157,19 +142,19 @@ void controller::run()
         {
             if (input.direction != straight)
             {
-                velocity = requested_velocity;
+                velocity = input.speed;
                 radius = input.direction == left ? 1 : -1;
             }
             else if (prox_max < 50)
             {
-                velocity = requested_velocity;
+                velocity = input.speed;
             }
             else
             {
-                velocity = 0;
                 // We are not turning,
                 // and we are in close proximity of an object.
-                // Stop.
+                // Hence, stop.
+                velocity = 0;
             }
 #if 0
             if (object_seen)
@@ -208,7 +193,7 @@ void controller::run()
             }
             else
             {
-                velocity = requested_velocity;
+                velocity = input.speed;
             }
             break;
         }
@@ -225,58 +210,25 @@ void controller::run()
             }
             break;
         }
-        case drive_forward:
+        case move:
         {
-#if 0
-            drive_stop();
+            if (input.distance)
+            {
+                velocity = input.speed;
 
-            if (collision_left_trail)
-            {
-                drive(100, -1);
-            }
-
-            int turn_direction = prox_left > prox_right ? -1 : 1;
-
-            if (prox_left > 10 || prox_right > 10 || prox_center > 10)
-            {
-                // Rotate away from obstacle
-                int velocity = 100;
-                drive(g_robot, velocity, turn_direction);
-            }
-            else if (prox_left > 0 || prox_right > 0 || prox_center > 0)
-            {
-                // Veer away from obstacle
-                int velocity = 100;
-                int radius = turn_direction * 100;
-                drive(g_robot, velocity, radius);
-            }
-            else
-            {
-                drive_straight(g_robot, 300);
-            }
-#endif
-            break;
-        }
-        case face_obstacle:
-        {
-#if 0
-            if (prox_max < 15)
-            {
-                drive_stop();
-            }
-            else
-            {
-                if (prox_max_idx == 2)
+                switch(input.direction)
                 {
-                    drive_stop();
-                }
-                else
-                {
-                    int turn_direction = prox_max_idx < 2 ? 1 : -1;
-                    drive(100, turn_direction);
+                case straight:
+                    radius = 0; break;
+                case left:
+                    radius = 1; break;
+                case right:
+                    radius = -1; break;
                 }
             }
-#endif
+
+            input.distance = trail_filter(input.distance);
+
             break;
         }
         default:
@@ -330,6 +282,7 @@ void controller::run()
                 m_sensors.proximity[5] > 50;
         output.object_centered = object_centered;
         output.done_shooting = input.behavior == shoot && shooting_phase == 0;
+        output.remaining_distance = input.distance;
 
         // Update past
 

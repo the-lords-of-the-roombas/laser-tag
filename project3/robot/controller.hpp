@@ -22,8 +22,7 @@ public:
         go,
         chase,
         shoot,
-        drive_forward,
-        face_obstacle
+        move,
     };
 
     enum direction_t
@@ -35,10 +34,13 @@ public:
 
     enum speed_t
     {
-        super_fast,
-        fast,
-        slow,
-        super_slow
+        // unit = mm/s
+        still = 0,
+        super_slow = 100,
+        slow = 200,
+        fast = 300,
+        super_fast = 400,
+        deadly_fast = 500
     };
 
     struct input_t
@@ -53,6 +55,7 @@ public:
         controller::behavior_t behavior;
         direction_t direction;
         speed_t speed;
+        uint16_t distance; // see "mm_to_distance_unit" below
         uint16_t sonar_cm;
         uint16_t sonar_cm_seek_threshold;
     };
@@ -79,6 +82,7 @@ public:
         bool object_right;
         bool object_centered;
         bool done_shooting;
+        uint16_t remaining_distance;
     };
 
     controller(irobot *robot,
@@ -90,6 +94,16 @@ public:
 
     // Must run in a periodic task:
     void run();
+
+    uint16_t mm_to_distance_units(uint16_t mm)
+    {
+        /*
+        slowest_speed = 100 mm/sec = 100/1000 mm/ms
+        mm-per-unit = period_ms * 100 / 1000
+        units = mm / mm-per-unit = mm * 1000 / (period_ms * 100) = mm * 10 / period_ms
+        */
+        return (mm * 10ul) / m_period_ms;
+    }
 
 private:
     struct sensor_data
