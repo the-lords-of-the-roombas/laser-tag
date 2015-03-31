@@ -105,7 +105,7 @@ void controller::run()
         {
             object_seek_trail = trail_filter(object_seek_trail);
         }
-
+#if 0
         int expected_object_direction = 0;
         if (object_seek_trail > 3 * object_seek_len / 4 )
             expected_object_direction = 1;
@@ -115,7 +115,7 @@ void controller::run()
             expected_object_direction = -1;
         else if (object_seek_trail < 0)
             expected_object_direction = 1;
-
+#endif
         uint16_t prox_max_idx = 0;
         uint16_t prox_max = array_max(m_sensors.proximity, 6, &prox_max_idx);
         //int16_t prox_weights[] = { -60, -26, -8, 26, 50, 102 };
