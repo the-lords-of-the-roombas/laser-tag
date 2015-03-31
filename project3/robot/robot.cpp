@@ -42,6 +42,7 @@ Service * volatile g_sonar_reply_service = 0;
 irobot g_robot(&Serial1, arduino::pin_baud_rate_change);
 static controller::input_t g_ctl_in;
 static controller::output_t g_ctl_out;
+static sequencer::output_t g_seq_out;
 Service * volatile g_ctl_out_service;
 
 
@@ -155,7 +156,7 @@ void navigate()
 
 void sequence()
 {
-    sequencer seq(&g_ctl_in, &g_ctl_out,
+    sequencer seq(&g_ctl_in, &g_ctl_out, &g_seq_out,
                   g_sonar_request_service, g_sonar_reply_service);
     seq.run();
 }
@@ -169,17 +170,18 @@ void control()
 
 void report()
 {
-    ServiceSubscription *report = Service_Subscribe(g_ctl_out_service);
+    //ServiceSubscription *report = Service_Subscribe(g_ctl_out_service);
+    //Service_Receive(report);
 
     for(;;)
     {
-        Service_Receive(report);
-
         controller::output_t ctl_out;
+        sequencer::output_t seq_out;
 
         ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
         {
             ctl_out = g_ctl_out;
+            seq_out = g_seq_out;
         }
 
         radio_packet_t tx_packet;
@@ -189,7 +191,8 @@ void report()
         tx_packet.debug.bump_right = ctl_out.bump_right;
         tx_packet.debug.object_left = ctl_out.object_left;
         tx_packet.debug.object_right = ctl_out.object_right;
-        tx_packet.debug.test = coin_flip(TCNT1);
+        tx_packet.debug.coin = seq_out.coin;
+        tx_packet.debug.seq_behavior = seq_out.behavior;
 
 #if 0
         for (int i = 0; i < 3; ++i)
@@ -208,7 +211,7 @@ void report()
         radio_packet_t rx_packet;
         while(Radio_Receive(&rx_packet) == RADIO_RX_MORE_PACKETS) {}
 
-        delay(200);
+        delay(300);
     }
 }
 

@@ -23,9 +23,11 @@ namespace robot_tag_game {
 
 sequencer::sequencer
 (controller::input_t *ctl_in, controller::output_t *ctl_out,
+ sequencer::output_t *seq_out,
  Service *sonar_request, Service *sonar_reply):
     m_ctl_in(ctl_in),
-    m_ctl_out(ctl_out)
+    m_ctl_out(ctl_out),
+    m_seq_out(seq_out)
 {
     m_sonar_request = sonar_request;
     m_sonar_reply = Service_Subscribe(sonar_reply);
@@ -43,6 +45,7 @@ void sequencer::run()
     //controller::direction_t seek_direction;
 
     bool blink_led = false;
+    bool coin = false;
 
     for(;;)
     {
@@ -79,7 +82,8 @@ void sequencer::run()
             {
                 seek_direction_time = (uint16_t) random_uint8(TCNT1) * 10 + 2000;
 
-                if (coin_flip(TCNT1))
+                coin = coin_flip(TCNT1);
+                if (coin)
                     next_behavior = seek_right;
                 else
                     next_behavior = seek_left;
@@ -233,6 +237,8 @@ void sequencer::run()
 
         ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
         {
+            m_seq_out->behavior = behavior;
+            m_seq_out->coin = coin;
             *m_ctl_in = ctl_in;
         }
 

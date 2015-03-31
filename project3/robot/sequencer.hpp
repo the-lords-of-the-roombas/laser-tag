@@ -20,8 +20,16 @@ public:
         critical_turn_right
     };
 
+    struct output_t
+    {
+        output_t(): coin(false), behavior(seek_straight) {}
+        bool coin;
+        behavior_t behavior;
+    };
+
     sequencer(controller::input_t *ctl_in,
               controller::output_t *ctl_out,
+              sequencer::output_t *seq_out,
               Service *sonar_request,
               Service *sonar_reply);
 
@@ -30,6 +38,7 @@ public:
 private:
     controller::input_t *m_ctl_in;
     controller::output_t *m_ctl_out;
+    sequencer::output_t *m_seq_out;
     Service *m_sonar_request;
     ServiceSubscription *m_sonar_reply;
 };

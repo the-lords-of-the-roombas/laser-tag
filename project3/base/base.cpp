@@ -70,8 +70,11 @@ int main()
                 Serial.print(rx_pkt.debug.object_right);
                 Serial.println();
 
-                Serial.print("Coin flip:");
-                Serial.println(rx_pkt.debug.test);
+                Serial.print("Coin:");
+                Serial.println(rx_pkt.debug.coin);
+
+                Serial.print("Bhavior:");
+                Serial.println(rx_pkt.debug.seq_behavior);
 #if 0
                 Serial.print("Behavior: ");
                 Serial.print(rx_pkt.debug.ctl_behavior);
