@@ -1,34 +1,41 @@
 #include "gun.hpp"
+#include "../rtos/os.h"
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <util/atomic.h>
 #include <Arduino.h>
 
 // 38kHz fequency = 0.00002631578947368421 second period
 // at 16Mhz and no prescaler, that is about 421 cycles.
 #define GUN_TIMER_TOP 421
 #define GUN_TIMER_HALF 210
-#define GUN_CYCLES_PER_BIT 250
+#define GUN_CYCLES_PER_TICK 250
 
-static robot_tag_game::gun *g = 0;
+static robot_tag_game::gun * volatile g = 0;
 
 namespace robot_tag_game {
 
-
-char *sending = "abcdef";
-int current_char_index = 0;
+// debug cruft:
+//char *sending = "abcdef";
+//int current_char_index = 0;
 
 gun::gun()
 {
-    current_bit_index = 0;
-    current_bit_phase = 0;
-    byte_to_send = 'z';
+    // Prevent sending anything:
+    m_current_bit_index = 8;
 }
 
 void gun::init()
 {
+    uint8_t sreg = SREG;
+    cli();
+
+    if (g)
+        OS_Abort();
+
     g = this;
 
-    pinMode(3, OUTPUT);    
+    pinMode(3, OUTPUT);
 
     // Clear control registers
     TCCR3A = 0;
@@ -59,69 +66,95 @@ void gun::init()
     TCCR4B |= (_BV(CS41));
     TCCR4B |= (_BV(CS40));
     // Time out after 1 tick
-    OCR4A = TCNT4 + GUN_CYCLES_PER_BIT;
+    OCR4A = TCNT4 + GUN_CYCLES_PER_TICK;
     // Clear interrupt flag
     TIFR4 = _BV(OCF4A);
     // Enable interrupt
     TIMSK4 |= _BV(OCIE4A);
+
+    sei();
+    SREG = sreg;
+}
+
+bool gun::send(char byte)
+{
+    bool ok = false;
+
+    ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
+    {
+        // Don't proceed if still transmitting.
+        if (m_current_bit_index > 7)
+        {
+            m_byte_to_send = byte;
+            m_current_bit_index = -1;
+            m_current_bit_phase = 0;
+
+            ok = true;
+        }
+    }
+
+    return ok;
 }
 
 void gun::send_hi()
 {
     // Enable output C:
     TCCR3A |= (1<<COM3C1);
-    digitalWrite(10, HIGH);
 }
 
 void gun::send_lo()
 {
     // Disable output C:
     TCCR3A &= ~(1<<COM3C1);
-    digitalWrite(10, LOW);
 }
 
 void gun::next_tick()
 {
-    byte_to_send = sending[current_char_index];
+    char byte_to_send;
+    char bit_idx;
+    char bit_phase;
 
-    if(current_bit_index < 0){
-        if(current_bit_index < -400)
-            digitalWrite(13, HIGH);
-        else
-            digitalWrite(13, LOW);
-        current_bit_index++;
+    ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
+    {
+        byte_to_send = m_byte_to_send;
+        bit_idx = m_current_bit_index;
+        bit_phase = m_current_bit_phase;
+    }
+
+    if (bit_idx > 7)
         return;
-    }
 
-    int value = 0;
-    int hi = 0;
-    value = byte_to_send &(1<<(7-current_bit_index));
-    
-    if(value)
+    if (bit_idx < 0)
     {
-        hi=current_bit_phase<3;
-    }else{
-        hi=current_bit_phase<1; 
-    }
-    
-    current_bit_phase++;
-    
-    if(current_bit_phase > 3)
-    {
-        current_bit_phase = 0;
-        current_bit_index++;
-    }
-
-    if(current_bit_index > 7)
-    {
-        current_bit_index = -500;
-        current_char_index = (current_char_index+1) % 6;
-    }
-
-    if(hi)
-        send_hi();
-    else
         send_lo();
+    }
+    else
+    {
+        int value = 0;
+        value = byte_to_send &(1<<(7-bit_idx));
+
+        bool hi;
+        if (value)
+            hi = bit_phase<3;
+        else
+            hi = bit_phase<1;
+
+        if (hi)
+            send_hi();
+        else
+            send_lo();
+    }
+
+    bit_phase++;
+
+    if (bit_phase > 3)
+    {
+        bit_phase = 0;
+        bit_idx++;
+    }
+
+    m_current_bit_index = bit_idx;
+    m_current_bit_phase = bit_phase;
 }
 
 void gun::run()
@@ -134,7 +167,7 @@ void gun::run()
 ISR(TIMER4_COMPA_vect)
 {
     if(!g) return;
-    OCR4A += GUN_CYCLES_PER_BIT;
+    OCR4A += GUN_CYCLES_PER_TICK;
     g->next_tick();
 }
 
