@@ -189,6 +189,7 @@ void report()
         tx_packet.debug.bump_right = ctl_out.bump_right;
         tx_packet.debug.object_left = ctl_out.object_left;
         tx_packet.debug.object_right = ctl_out.object_right;
+        tx_packet.debug.test = coin_flip(TCNT1);
 
 #if 0
         for (int i = 0; i < 3; ++i)

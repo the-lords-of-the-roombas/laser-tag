@@ -76,6 +76,17 @@ T abs_dif(T a, T b)
         return b - a;
 }
 
+inline bool coin_flip(uint16_t clock)
+{
+    return clock & 0x1;
+}
+
+inline uint8_t random_uint8(uint16_t clock)
+{
+    return clock & 0xFF;
+}
+
+
 template<typename T, unsigned int N>
 class variance_filter
 {

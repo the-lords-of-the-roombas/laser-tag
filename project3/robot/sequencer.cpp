@@ -15,6 +15,7 @@
 
 #include "sequencer.hpp"
 #include "sonar.hpp"
+#include "../util.h"
 #include <util/atomic.h>
 #include <Arduino.h>
 
@@ -37,7 +38,9 @@ void sequencer::run()
 
     behavior_t behavior = seek_straight;
     uint16_t behavior_onset = Now();
-    controller::direction_t last_turn = controller::left;
+    //controller::direction_t last_turn = controller::left;
+    uint16_t seek_direction_time = 3000;
+    //controller::direction_t seek_direction;
 
     bool blink_led = false;
 
@@ -72,9 +75,11 @@ void sequencer::run()
             {
                 next_behavior = chase;
             }
-            else if (time - behavior_onset > 3000)
+            else if (time - behavior_onset > seek_direction_time)
             {
-                if (last_turn == controller::left)
+                seek_direction_time = (uint16_t) random_uint8(TCNT1) * 10 + 2000;
+
+                if (coin_flip(TCNT1))
                     next_behavior = seek_right;
                 else
                     next_behavior = seek_left;
@@ -88,12 +93,12 @@ void sequencer::run()
                 else
                     next_behavior = seek_right;
             }
-
+#if 0
             if (next_behavior == seek_right)
                 last_turn = controller::right;
             else if (next_behavior == seek_left)
                 last_turn = controller::left;
-
+#endif
             break;
         }
         case seek_left:
