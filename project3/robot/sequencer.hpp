@@ -2,6 +2,7 @@
 #define ROBOT_TAG_GAME_SEQUENCER_INCLUDED
 
 #include "controller.hpp"
+#include "gun.hpp"
 #include "../rtos/os.h"
 #include <stdint.h>
 
@@ -33,7 +34,8 @@ public:
               uint16_t ctl_period_ms,
               sequencer::output_t *seq_out,
               Service *sonar_request,
-              Service *sonar_reply);
+              Service *sonar_reply,
+              gun *);
 
     void run();
 
@@ -48,8 +50,11 @@ private:
     uint16_t m_ctl_period_ms;
 
     sequencer::output_t *m_seq_out;
+
     Service *m_sonar_request;
     ServiceSubscription *m_sonar_reply;
+
+    gun *m_gun;
 };
 
 }

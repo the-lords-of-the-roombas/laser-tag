@@ -25,11 +25,12 @@ sequencer::sequencer
 (controller::input_t *ctl_in, controller::output_t *ctl_out,
  uint16_t ctl_period_ms,
  sequencer::output_t *seq_out,
- Service *sonar_request, Service *sonar_reply):
+ Service *sonar_request, Service *sonar_reply, gun *g):
     m_ctl_in(ctl_in),
     m_ctl_out(ctl_out),
     m_ctl_period_ms(ctl_period_ms),
-    m_seq_out(seq_out)
+    m_seq_out(seq_out),
+    m_gun(g)
 {
     m_sonar_request = sonar_request;
     m_sonar_reply = Service_Subscribe(sonar_reply);
@@ -210,11 +211,9 @@ void sequencer::run()
                     while (ctl_out.remaining_distance);
                 }
 
-                ctl_in.behavior = controller::shoot;
+                m_gun->send('x');
 
-                set(ctl_in);
-                do { wait_ms(100); get(ctl_out); }
-                while (!ctl_out.done_shooting);
+                wait_ms(50);
             }
 
             behavior = critical_turn_right;
