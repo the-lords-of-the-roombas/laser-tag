@@ -8,6 +8,11 @@
 
 namespace robot_tag_game {
 
+/*
+  Any task that shares input_t and output_t instances must be
+  of lower priority!
+*/
+
 class controller
 {
 public:

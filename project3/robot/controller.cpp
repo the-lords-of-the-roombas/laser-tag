@@ -38,13 +38,18 @@ void controller::run()
     bool was_shooting = false;
     int shooting_phase = 0;
 
-    input_t input;
-    output_t output;
+    input_t & input = *m_input_src;
+    output_t & output = *m_output_dst;
 
     static const int object_seek_len = 2000 / m_period_ms;
 
     for(;;)
     {
+        // Get input
+
+        // Sync shared memory (input, output):
+        memory_barrier();
+
 #if 0
         {
             static bool on = true;
@@ -63,13 +68,6 @@ void controller::run()
         {
             m_robot->stop();
             OS_Abort();
-        }
-
-        // Get input
-
-        ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
-        {
-            input = *m_input_src;
         }
 
         // Compute environment
@@ -333,13 +331,6 @@ void controller::run()
         output.object_centered = object_centered;
         output.done_shooting = input.behavior == shoot && shooting_phase == 0;
 
-        ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
-        {
-            *m_output_dst = output;
-        }
-
-        Service_Publish(m_output_service, 0);
-
         // Update past
 
         if (radius > 0)
@@ -350,6 +341,13 @@ void controller::run()
             last_direction = 0;
 
         was_shooting = input.behavior == shoot;
+
+        // Provide output
+
+        // Sync shared memory (input, output):
+        memory_barrier();
+
+        Service_Publish(m_output_service, 0);
 
         Task_Next();
     }
