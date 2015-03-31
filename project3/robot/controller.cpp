@@ -132,6 +132,8 @@ void controller::run()
         int16_t velocity = 0;
         int16_t radius = 0;
 
+        uint16_t input_velocity = input.speed * 100;
+
         switch(input.behavior)
         {
         case wait:
@@ -140,22 +142,26 @@ void controller::run()
         }
         case go:
         {
-            if (input.direction != straight)
+            velocity = input_velocity;
+
+            switch(input.direction)
             {
-                velocity = input.speed;
-                radius = input.direction == left ? 1 : -1;
+            case leftward:
+                radius = 1; break;
+            case rightward:
+                radius = -1; break;
+            case backward:
+                // not allowed
+                break;
+            default:
+                radius = 0;
+                // Stop on close proximity
+                if (prox_max >= 50)
+                    velocity = 0;
             }
-            else if (prox_max < 50)
-            {
-                velocity = input.speed;
-            }
-            else
-            {
-                // We are not turning,
-                // and we are in close proximity of an object.
-                // Hence, stop.
-                velocity = 0;
-            }
+
+            break;
+
 #if 0
             if (object_seen)
             {
@@ -193,7 +199,7 @@ void controller::run()
             }
             else
             {
-                velocity = input.speed;
+                velocity = input_velocity;
             }
             break;
         }
@@ -214,20 +220,26 @@ void controller::run()
         {
             if (input.distance)
             {
-                velocity = input.speed;
+                velocity = input_velocity;
 
                 switch(input.direction)
                 {
-                case straight:
+                case forward:
                     radius = 0; break;
-                case left:
+                case backward:
+                    radius = 0; velocity = -velocity; break;
+                case leftward:
                     radius = 1; break;
-                case right:
+                case rightward:
                     radius = -1; break;
                 }
             }
 
-            input.distance = trail_filter(input.distance);
+            input.distance -= input.speed;
+            if (input.distance > 0)
+                input.distance = 0;
+
+                    trail_filter(input.distance);
 
             break;
         }

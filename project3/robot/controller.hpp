@@ -27,27 +27,28 @@ public:
 
     enum direction_t
     {
-        straight = 0,
-        left,
-        right
+        forward,
+        backward,
+        leftward,
+        rightward
     };
 
     enum speed_t
     {
-        // unit = mm/s
+        // unit = dm/s
         still = 0,
-        super_slow = 100,
-        slow = 200,
-        fast = 300,
-        super_fast = 400,
-        deadly_fast = 500
+        super_slow = 1,
+        slow = 2,
+        fast = 3,
+        super_fast = 4,
+        deadly_fast = 5
     };
 
     struct input_t
     {
         input_t():
             behavior(wait),
-            direction(straight),
+            direction(forward),
             sonar_cm(0),
             sonar_cm_seek_threshold(0)
         {}
@@ -95,14 +96,19 @@ public:
     // Must run in a periodic task:
     void run();
 
-    uint16_t mm_to_distance_units(uint16_t mm)
+    uint16_t mm_to_distance(uint16_t mm)
+    {
+        return mm_to_distance(mm, m_period_ms);
+    }
+
+    static uint16_t mm_to_distance(uint16_t mm, uint16_t ms_per_period)
     {
         /*
         slowest_speed = 100 mm/sec = 100/1000 mm/ms
-        mm-per-unit = period_ms * 100 / 1000
-        units = mm / mm-per-unit = mm * 1000 / (period_ms * 100) = mm * 10 / period_ms
+        mm-per-unit = ms_per_period * 100 / 1000
+        units = mm / mm-per-unit = mm * 1000 / (period_ms * 100) = mm * 10 / ms_per_period
         */
-        return (mm * 10ul) / m_period_ms;
+        return (mm * 10ul) / ms_per_period;
     }
 
 private:
