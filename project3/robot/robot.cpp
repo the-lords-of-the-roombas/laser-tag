@@ -161,7 +161,8 @@ void navigate()
 
 void sequence()
 {
-    sequencer seq(&g_ctl_in, &g_ctl_out, &g_seq_out,
+    sequencer seq(&g_ctl_in, &g_ctl_out, control_period_ticks * TICK,
+                  &g_seq_out,
                   g_sonar_request_service, g_sonar_reply_service);
     seq.run();
 }

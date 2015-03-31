@@ -23,10 +23,12 @@ namespace robot_tag_game {
 
 sequencer::sequencer
 (controller::input_t *ctl_in, controller::output_t *ctl_out,
+ uint16_t ctl_period_ms,
  sequencer::output_t *seq_out,
  Service *sonar_request, Service *sonar_reply):
     m_ctl_in(ctl_in),
     m_ctl_out(ctl_out),
+    m_ctl_period_ms(ctl_period_ms),
     m_seq_out(seq_out)
 {
     m_sonar_request = sonar_request;
@@ -148,14 +150,6 @@ void sequencer::run()
                 digitalWrite(13, LOW);*/
             break;
         }
-        case shoot:
-        {
-            if (ctl_out.done_shooting)
-            {
-                next_behavior = critical_turn_right;
-            }
-            break;
-        }
         case critical_turn_right:
         case critical_turn_left:
         {
@@ -163,6 +157,8 @@ void sequencer::run()
                 next_behavior = seek_straight;
             break;
         }
+        default:
+            break;
         }
 
         // Select critical behaviors if necessary
@@ -187,44 +183,82 @@ void sequencer::run()
 
         // Execute behavior
 
+        if (behavior == shoot)
+        {
+            uint16_t hop_distance = controller::mm_to_distance(500, m_ctl_period_ms);
+
+            ctl_in.behavior = controller::move;
+            ctl_in.direction = controller::leftward;
+            ctl_in.speed = controller::fast;
+            ctl_in.distance = hop_distance;
+
+            set(ctl_in);
+            do { wait_ms(25); get(ctl_out); }
+            while (ctl_out.remaining_distance);
+
+            for (int i = 0; i < 3; ++i)
+            {
+                if (i > 0)
+                {
+                    ctl_in.behavior = controller::move;
+                    ctl_in.direction = controller::rightward;
+                    ctl_in.speed = controller::fast;
+                    ctl_in.distance = hop_distance;
+
+                    set(ctl_in);
+                    do { wait_ms(25); get(ctl_out); }
+                    while (ctl_out.remaining_distance);
+                }
+
+                ctl_in.behavior = controller::shoot;
+
+                set(ctl_in);
+                do { wait_ms(100); get(ctl_out); }
+                while (!ctl_out.done_shooting);
+            }
+
+            behavior = critical_turn_right;
+            behavior_onset = Now();
+
+            // Loop right back to top
+            continue;
+        }
+
         switch(behavior)
         {
         case seek_straight:
         {
             ctl_in.behavior = controller::go;
-            ctl_in.direction = controller::straight;
+            ctl_in.direction = controller::forward;
             ctl_in.speed = controller::fast;
             break;
         }
         case seek_left:
             ctl_in.behavior = controller::go;
-            ctl_in.direction = controller::left;
+            ctl_in.direction = controller::leftward;
             ctl_in.speed = controller::slow;
             break;
         case seek_right:
             ctl_in.behavior = controller::go;
-            ctl_in.direction = controller::right;
+            ctl_in.direction = controller::rightward;
             ctl_in.speed = controller::slow;
             break;
         case chase:
             ctl_in.behavior = controller::chase;
-            ctl_in.direction = controller::straight;
+            ctl_in.direction = controller::forward;
             ctl_in.speed = controller::super_fast;
             break;
-        case shoot:
-        {
-            ctl_in.behavior = controller::shoot;
-            break;
-        }
         case critical_turn_left:
             ctl_in.behavior = controller::go;
-            ctl_in.direction = controller::left;
+            ctl_in.direction = controller::leftward;
             ctl_in.speed = controller::fast;
             break;
         case critical_turn_right:
             ctl_in.behavior = controller::go;
-            ctl_in.direction = controller::right;
+            ctl_in.direction = controller::rightward;
             ctl_in.speed = controller::fast;
+            break;
+        default:
             break;
         }
 
@@ -271,5 +305,36 @@ void sequencer::run()
     }
 }
 
+void sequencer::set(controller::input_t & in)
+{
+    ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
+    {
+        *m_ctl_in = in;
+    }
+}
+
+void sequencer::get(controller::output_t & out)
+{
+    ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
+    {
+        out = *m_ctl_out;
+    }
+}
+
+void sequencer::swap(controller::input_t & in, controller::output_t & out)
+{
+    ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
+    {
+        *m_ctl_in = in;
+        out = *m_ctl_out;
+    }
+}
+
+void sequencer::wait_ms(uint16_t milliseconds)
+{
+    uint16_t start = Now();
+    while ((Now() - start) < milliseconds)
+        ;
+}
 
 }
