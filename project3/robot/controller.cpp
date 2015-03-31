@@ -301,8 +301,11 @@ void controller::run()
         output.radius = radius;
         output.last_direction = last_direction;
 */
-        output.bump_left = ban_travel_time < 0;
-        output.bump_right = ban_travel_time > 0;
+        if (m_sensors.bump_left)
+            output.bump_left = true;
+        else if (m_sensors.bump_right)
+            output.bump_right = true;
+
         output.object_left =
                 m_sensors.proximity[0] > 50 ||
                 m_sensors.proximity[1] > 50 ||

@@ -43,6 +43,7 @@ private:
     void set(controller::input_t & in);
     void get(controller::output_t & out);
     void swap(controller::input_t & in, controller::output_t & out);
+    void check_bumps(controller::output_t &, behavior_t &);
     void wait_ms(uint16_t milliseconds);
 
     controller::input_t *m_ctl_in;
