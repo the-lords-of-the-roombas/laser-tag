@@ -133,6 +133,7 @@ void controller::run()
         int16_t radius = 0;
 
         uint16_t input_velocity = input.speed * 100;
+        int distance_travelled = 0;
 
         switch(input.behavior)
         {
@@ -233,13 +234,9 @@ void controller::run()
                 case rightward:
                     radius = -1; break;
                 }
+
+                distance_travelled = input.speed;
             }
-
-            input.distance -= input.speed;
-            if (input.distance > 0)
-                input.distance = 0;
-
-                    trail_filter(input.distance);
 
             break;
         }
@@ -254,11 +251,15 @@ void controller::run()
         {
             radius = 0;
             velocity = -100;
+            distance_travelled = 0;
         }
         else if (ban_travel_time || prox_max > 50)
         {
             if (radius != 1 && radius != -1)
+            {
                 velocity = 0;
+                distance_travelled = 0;
+            }
         }
 
 #if 0
@@ -272,6 +273,24 @@ void controller::run()
             drive_straight(velocity);
         else
             drive(velocity, radius);
+
+        // Update feed back input
+
+        if (radius > 0)
+            last_direction = 1;
+        else if (radius < 0)
+            last_direction = -1;
+        else
+            last_direction = 0;
+
+        was_shooting = input.behavior == shoot;
+
+        {
+            int distance_to_go = input.distance - distance_travelled;
+            if (distance_to_go < 0)
+                distance_to_go = 0;
+            input.distance = distance_to_go;
+        }
 
         // Output
 /*
@@ -295,19 +314,6 @@ void controller::run()
         output.object_centered = object_centered;
         output.done_shooting = input.behavior == shoot && shooting_phase == 0;
         output.remaining_distance = input.distance;
-
-        // Update past
-
-        if (radius > 0)
-            last_direction = 1;
-        else if (radius < 0)
-            last_direction = -1;
-        else
-            last_direction = 0;
-
-        was_shooting = input.behavior == shoot;
-
-        // Provide output
 
         // Sync shared memory (input, output):
         memory_barrier();
