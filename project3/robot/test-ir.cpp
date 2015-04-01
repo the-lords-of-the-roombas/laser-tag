@@ -1,20 +1,23 @@
+#include "gun.hpp"
 #include "../irobot/irobot.hpp"
 #include "../arduino_config.h"
+#include "../rtos/os.h"
+
 #include "Arduino.h"
 
 using namespace robot_tag_game;
 
-int main()
+int r_main()
 {
-    init();
-
-    pinMode(13, OUTPUT);
-
     Serial.begin(9600);
 
     irobot robot(&Serial1, arduino::pin_baud_rate_change);
-
     robot.begin();
+
+    gun g;
+    g.init();
+
+    uint16_t time = Now();
 
     while(true)
     {
@@ -47,6 +50,9 @@ int main()
         Serial.print(" ");
         Serial.print(stop - start);
         Serial.println();
+
+        if (Now() - time >= 500)
+            g.send('z');
     }
 
     return 0;

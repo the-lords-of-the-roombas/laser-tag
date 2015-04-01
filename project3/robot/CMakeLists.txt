@@ -17,11 +17,8 @@ target_link_libraries(test-radio radio rtos arduino)
 
 ## IR Receive / Transmit Test
 
-add_arduino_executable(test-ir-receive test-ir-receive.cpp)
-target_link_libraries(test-ir-receive irobot arduino)
-
-add_arduino_executable(test-ir-transmit test-ir-transmit.cpp gun.cpp)
-target_link_libraries(test-ir-transmit rtos arduino)
+add_arduino_executable(test-ir test-ir.cpp gun.cpp)
+target_link_libraries(test-ir rtos irobot arduino)
 
 ## Robot
 
