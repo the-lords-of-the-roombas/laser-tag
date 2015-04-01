@@ -209,7 +209,7 @@ void sequencer::run()
 
                 m_gun->send(MY_ID);
 
-                wait_ms(50);
+                wait_ms(70);
             }
 
             next_behavior = critical_turn_right;
