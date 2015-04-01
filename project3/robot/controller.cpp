@@ -27,6 +27,11 @@ static int trail_filter(int v)
         return v;
 }
 
+static bool dif_less_than(uint8_t dif, uint16_t a, uint16_t b)
+{
+    return (a >= b && a - b < dif) || (a < b && b - a < dif);
+}
+
 void controller::run()
 {
     int back_up_time = 0;
@@ -186,15 +191,19 @@ void controller::run()
             if (prox_max > 50)
             {
                 // We are in close proximity of object
-                if (prox_max_idx == 2)
+
+                uint16_t max_prox = m_sensors.proximity[prox_max_idx];
+                uint16_t center_prox = m_sensors.proximity[2];
+
+                if (dif_less_than(50, max_prox, center_prox))
                 {
-                    object_centered = true;
                     // We have aimed right into the object
+                    object_centered = true;
                 }
                 else
                 {
                     // Turn towards the object
-                    velocity = 50;
+                    velocity = 100;
                     radius =  prox_max_idx < 2 ? 1 : -1;
                 }
             }
