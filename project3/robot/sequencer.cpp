@@ -182,7 +182,7 @@ void sequencer::run()
         }
         case shoot:
         {
-            uint16_t hop_distance = controller::mm_to_distance(50, m_ctl_period_ms);
+            uint16_t hop_distance = controller::mm_to_distance(30, m_ctl_period_ms);
 
             ctl_in.behavior = controller::move;
             ctl_in.direction = controller::leftward;
