@@ -53,7 +53,15 @@ int main()
             case game_status_packet_type:
                 break;
             case shot_packet_type:
+            {
+                Serial.print("SHOT: ");
+                Serial.print("Shooter = ");
+                Serial.print(rx_pkt.shot.shooter_id);
+                Serial.print(" / Target = ");
+                Serial.print(rx_pkt.shot.target_id);
+                Serial.println();
                 break;
+            }
             case debug_packet_type:
             {
                 Serial.println("---");
