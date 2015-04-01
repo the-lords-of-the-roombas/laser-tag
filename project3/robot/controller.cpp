@@ -150,18 +150,15 @@ void controller::run()
 
             switch(input.direction)
             {
+            case forward:
+                radius = input.radius; break;
+            case backward:
+                // not allowed
+                break;
             case leftward:
                 radius = 1; break;
             case rightward:
                 radius = -1; break;
-            case backward:
-                // not allowed
-                break;
-            default:
-                radius = 0;
-                // Stop on close proximity
-                if (prox_max >= 50)
-                    velocity = 0;
             }
 
             break;

@@ -49,6 +49,7 @@ public:
         input_t():
             behavior(wait),
             direction(forward),
+            radius(0),
             sonar_cm(0),
             sonar_cm_seek_threshold(0)
         {}
@@ -56,6 +57,7 @@ public:
         controller::behavior_t behavior;
         direction_t direction;
         speed_t speed;
+        uint16_t radius;
         uint16_t distance; // see "mm_to_distance_unit" below
         uint16_t sonar_cm;
         uint16_t sonar_cm_seek_threshold;

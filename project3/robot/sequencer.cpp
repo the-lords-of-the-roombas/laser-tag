@@ -45,10 +45,9 @@ void sequencer::run()
     behavior_t behavior = seek_straight;
     uint16_t behavior_onset = Now();
 
-    behavior_t last_turn_behavior = seek_left;
+    //behavior_t last_turn_behavior = seek_left;
+    controller::direction_t last_seek_dir = controller::leftward;
 
-    //bool blink_led = false;
-    bool coin = false;
 
     static const int target_distance_threshold_cm = 100;
 
@@ -62,12 +61,22 @@ void sequencer::run()
         {
         case seek_straight:
         {
-            uint16_t duration = (uint16_t) random_uint8(TCNT1) * 10 + 2000;
+            uint16_t duration = (uint16_t) random_uint8(TCNT1) * 14 + 1000;
             uint16_t onset = Now();
 
             ctl_in.behavior = controller::go;
             ctl_in.direction = controller::forward;
             ctl_in.speed = controller::fast;
+            if (last_seek_dir == controller::leftward)
+            {
+                ctl_in.radius = -600;
+                last_seek_dir = controller::rightward;
+            }
+            else
+            {
+                ctl_in.radius = 600;
+                last_seek_dir = controller::leftward;
+            }
 
             set(ctl_in);
 
@@ -90,20 +99,9 @@ void sequencer::run()
                 }
                 else if (Now() - onset > duration)
                 {
-                    // 1/4 chance true
-                    coin = (random_uint8(TCNT1) & 0xFF) < 64;
-
-                    if (coin)
-                        next_behavior = last_turn_behavior;
-                    else
-                    {
-                        if (last_turn_behavior == seek_left)
-                            next_behavior = seek_right;
-                        else
-                            next_behavior = seek_left;
-                    }
-
-                    last_turn_behavior = next_behavior;
+                    next_behavior = seek_straight;
+                    // Force restart of the same behavior:
+                    break;
                 }
                 else if (ctl_out.object_left || ctl_out.object_right)
                 {
