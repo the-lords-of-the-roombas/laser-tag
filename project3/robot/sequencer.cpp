@@ -110,7 +110,7 @@ void sequencer::run()
                     else if (!ctl_out.object_left)
                         next_behavior = seek_left;
                     else
-                        next_behavior = seek_right;
+                        next_behavior = critical_turn_left;
                 }
 
                 // Critical
