@@ -16,6 +16,7 @@
 #include "sequencer.hpp"
 #include "sonar.hpp"
 #include "../util.h"
+#include "../world.hpp"
 #include <util/atomic.h>
 #include <Arduino.h>
 
@@ -208,7 +209,7 @@ void sequencer::run()
                     while (ctl_out.remaining_distance);
                 }
 
-                m_gun->send('x');
+                m_gun->send(MY_ID);
 
                 wait_ms(50);
             }

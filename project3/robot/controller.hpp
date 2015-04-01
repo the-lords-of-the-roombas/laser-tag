@@ -90,7 +90,7 @@ public:
                gun *,
                input_t *input,
                output_t *output,
-               Service *out_service,
+               Service *shot_service,
                uint16_t period_ms);
 
     // Must run in a periodic task:
@@ -118,6 +118,7 @@ private:
         bool bump_right;
         bool wheel_drop;
         uint16_t proximity[6];
+        uint8_t ir;
     };
 
     enum turn_direction
@@ -146,7 +147,7 @@ private:
     gun *m_gun;
     input_t *m_input_src;
     output_t *m_output_dst;
-    Service *m_output_service;
+    Service *m_shot_service;
     uint16_t m_period_ms;
 
     sensor_data m_sensors;

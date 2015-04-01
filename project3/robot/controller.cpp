@@ -1,5 +1,6 @@
 #include "controller.hpp"
 #include "../util.h"
+#include "../world.hpp"
 #include <util/atomic.h>
 #include <Arduino.h>
 
@@ -7,12 +8,12 @@ namespace robot_tag_game {
 
 controller::controller
 (irobot *robot, gun *g, input_t *input, output_t *output,
- Service *output_service, uint16_t period_ms):
+ Service *shot_service, uint16_t period_ms):
     m_robot(robot),
     m_gun(g),
     m_input_src(input),
     m_output_dst(output),
-    m_output_service(output_service),
+    m_shot_service(shot_service),
     m_period_ms(period_ms)
 {}
 
@@ -37,6 +38,8 @@ void controller::run()
     bool object_last_seen = false;
     bool was_shooting = false;
     int shooting_phase = 0;
+
+    uint8_t last_ir = 0;
 
     input_t & input = *m_input_src;
     output_t & output = *m_output_dst;
@@ -321,7 +324,13 @@ void controller::run()
         // Sync shared memory (input, output):
         memory_barrier();
 
-        Service_Publish(m_output_service, 0);
+        if ( m_sensors.ir != 0 && m_sensors.ir != last_ir
+             && m_sensors.ir != MY_ID)
+        {
+            Service_Publish(m_shot_service, m_sensors.ir);
+        }
+
+        last_ir = m_sensors.ir;
 
         Task_Next();
     }
@@ -332,7 +341,7 @@ void controller::run()
 void controller::acquire_sensors(sensor_data & d)
 {
     {
-        static const int sensor_count = 7;
+        static const int sensor_count = 8;
         uint8_t data[] = {
             sensor_count,
             irobot::sense_bumps_and_wheel_drops,
@@ -342,6 +351,7 @@ void controller::acquire_sensors(sensor_data & d)
             irobot::sense_light_bump_center_right_signal,
             irobot::sense_light_bump_front_right_signal,
             irobot::sense_light_bump_right_signal,
+            irobot::sense_infrared_omni
         };
 #if 0
         data[0] = sensor_count;
@@ -374,6 +384,7 @@ void controller::acquire_sensors(sensor_data & d)
     m_robot->receive(raw_proxim_rc, 2);
     m_robot->receive(raw_proxim_rf, 2);
     m_robot->receive(raw_proxim_r, 2);
+    m_robot->receive(&d.ir, 1);
 
     d.wheel_drop = raw_bumps_and_wheel_drops & (_BV(3) | _BV(2));
     d.bump_left = raw_bumps_and_wheel_drops & _BV(1);

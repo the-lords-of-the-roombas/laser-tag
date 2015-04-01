@@ -41,6 +41,7 @@ Service * volatile g_sonar_reply_service = 0;
 // Gun
 
 gun g_gun;
+Service * volatile g_shot_service;
 
 // Control
 
@@ -170,18 +171,18 @@ void sequence()
 
 void control()
 {
-    controller ctl(&g_robot, &g_gun, &g_ctl_in, &g_ctl_out, g_ctl_out_service,
+    controller ctl(&g_robot, &g_gun, &g_ctl_in, &g_ctl_out, g_shot_service,
                    control_period_ticks * TICK);
     ctl.run();
 }
 
 void report()
 {
-    //ServiceSubscription *report = Service_Subscribe(g_ctl_out_service);
-    //Service_Receive(report);
+    ServiceSubscription *shot_sub = Service_Subscribe(g_shot_service);
 
     for(;;)
     {
+#if 0
         controller::output_t ctl_out;
         sequencer::output_t seq_out;
 
@@ -190,35 +191,20 @@ void report()
             ctl_out = g_ctl_out;
             seq_out = g_seq_out;
         }
+#endif
+        int16_t shooter_id = Service_Receive(shot_sub);
 
         radio_packet_t tx_packet;
-        tx_packet.type = debug_packet_type;
+        tx_packet.type = shot_packet_type;
+        tx_packet.shot.shooter_id = shooter_id;
+        tx_packet.shot.target_id = MY_ID;
 
-        tx_packet.debug.bump_left = ctl_out.bump_left;
-        tx_packet.debug.bump_right = ctl_out.bump_right;
-        tx_packet.debug.object_left = ctl_out.object_left;
-        tx_packet.debug.object_right = ctl_out.object_right;
-        tx_packet.debug.coin = seq_out.coin;
-        tx_packet.debug.seq_behavior = seq_out.behavior;
-
-#if 0
-        for (int i = 0; i < 3; ++i)
-            tx_packet.debug.proximities[i] = g_sensors_derived.proximities[i];
-
-        tx_packet.debug.ctl_behavior = ctl_out.behavior;
-        tx_packet.debug.sonar_cm = ctl_out.sonar_cm;
-        tx_packet.debug.obj_motion = ctl_out.obj_motion_trail;
-        tx_packet.debug.obj_seek = ctl_out.obj_seek_trail;
-        tx_packet.debug.radius = ctl_out.radius;
-        tx_packet.debug.last_dir = ctl_out.last_direction;
-#endif
         Radio_Transmit(&tx_packet, RADIO_WAIT_FOR_TX);
 
         // Clear receive buffer
         radio_packet_t rx_packet;
         while(Radio_Receive(&rx_packet) == RADIO_RX_MORE_PACKETS) {}
 
-        delay(300);
     }
 }
 
@@ -254,8 +240,6 @@ int r_main()
 {
     pinMode(13, OUTPUT);
 
-    g_ctl_out_service = Service_Init();
-
     // Init radio
 
     init_radio();
@@ -268,6 +252,7 @@ int r_main()
     // Init gun
 
     g_gun.init();
+    g_shot_service = Service_Init();
 
     // Init robot
 

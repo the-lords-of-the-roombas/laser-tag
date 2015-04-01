@@ -8,4 +8,6 @@
 #define RADIO_CHANNEL 102
 #define RADIO_RATE RADIO_1MBPS
 
+#define MY_ID 'a'
+
 #endif // ROBOT_TAG_GAME_WORLD_INCLUDED
