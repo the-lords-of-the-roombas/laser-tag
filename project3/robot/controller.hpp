@@ -49,9 +49,7 @@ public:
         input_t():
             behavior(wait),
             direction(forward),
-            radius(0),
-            sonar_cm(0),
-            sonar_cm_seek_threshold(0)
+            radius(0)
         {}
 
         controller::behavior_t behavior;
@@ -59,8 +57,6 @@ public:
         speed_t speed;
         uint16_t radius;
         uint16_t distance; // see "mm_to_distance_unit" below
-        uint16_t sonar_cm;
-        uint16_t sonar_cm_seek_threshold;
     };
 
     struct output_t

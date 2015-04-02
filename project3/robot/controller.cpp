@@ -37,10 +37,6 @@ void controller::run()
     int back_up_time = 0;
     int ban_travel_time = 0;
 
-    int last_direction = 0;
-    int object_motion_trail = 0;
-    int object_seek_trail = 0;
-    bool object_last_seen = false;
     bool was_shooting = false;
     int shooting_phase = 0;
 
@@ -48,8 +44,6 @@ void controller::run()
 
     input_t & input = *m_input_src;
     output_t & output = *m_output_dst;
-
-    static const int object_seek_len = 2000 / m_period_ms;
 
     for(;;)
     {
@@ -93,37 +87,7 @@ void controller::run()
         else
             ban_travel_time = trail_filter(ban_travel_time);
 
-        bool object_seen = input.sonar_cm <= input.sonar_cm_seek_threshold;
-        bool object_disappeared = !object_seen && object_last_seen;
-        object_last_seen = object_seen;
 
-        if (object_seen && last_direction != 0)
-            object_motion_trail = last_direction * 150;
-        else
-            object_motion_trail = trail_filter(object_motion_trail);
-
-        if (object_disappeared && object_motion_trail != 0)
-        {
-            if (object_motion_trail > 0)
-                object_seek_trail = object_seek_len;
-            else
-                object_seek_trail = -object_seek_len;
-        }
-        else
-        {
-            object_seek_trail = trail_filter(object_seek_trail);
-        }
-#if 0
-        int expected_object_direction = 0;
-        if (object_seek_trail > 3 * object_seek_len / 4 )
-            expected_object_direction = 1;
-        else if (object_seek_trail > 0)
-            expected_object_direction = -1;
-        else if (object_seek_trail < -3 * object_seek_len / 4)
-            expected_object_direction = -1;
-        else if (object_seek_trail < 0)
-            expected_object_direction = 1;
-#endif
         uint16_t prox_max_idx = 0;
         uint16_t prox_max = array_max(m_sensors.proximity, 6, &prox_max_idx);
         //int16_t prox_weights[] = { -60, -26, -8, 26, 50, 102 };
@@ -166,24 +130,6 @@ void controller::run()
                 radius = -1; break;
             }
 
-            break;
-
-#if 0
-            if (object_seen)
-            {
-                // stop
-            }
-            else if (expected_object_direction)
-            {
-                velocity = 200;
-                radius = expected_object_direction > 0 ? 1 : -1;
-            }
-            else
-            {
-                velocity = 100;
-                radius = 1;
-            }
-#endif
             break;
         }
         case chase:
@@ -284,13 +230,6 @@ void controller::run()
             drive(velocity, radius);
 
         // Update feed back input
-
-        if (radius > 0)
-            last_direction = 1;
-        else if (radius < 0)
-            last_direction = -1;
-        else
-            last_direction = 0;
 
         was_shooting = input.behavior == shoot;
 
