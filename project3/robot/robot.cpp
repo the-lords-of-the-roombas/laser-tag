@@ -27,9 +27,12 @@ static uint8_t radio_base_address[5] = BASE_RADIO_ADDRESS;
 static uint8_t radio_robot0_address[5] = ROBOT_0_RADIO_ADDRESS;
 static uint16_t volatile control_period_ticks = 5;
 
+static Service * volatile g_radio_service = 0;
+
 extern "C" {
 void radio_rxhandler(uint8_t pipenumber)
 {
+    Service_Publish(g_radio_service, pipenumber);
 }
 }
 
@@ -179,6 +182,9 @@ void control()
 void report()
 {
     ServiceSubscription *shot_sub = Service_Subscribe(g_shot_service);
+    ServiceSubscription *radio_sub = Service_Subscribe(g_radio_service);
+
+    ServiceSubscription *subs[] = { shot_sub, radio_sub };
 
     for(;;)
     {
@@ -192,19 +198,37 @@ void report()
             seq_out = g_seq_out;
         }
 #endif
-        int16_t shooter_id = Service_Receive(shot_sub);
+        unsigned int srv_idx;
+        int16_t srv_value = Service_Receive_Mux(subs, 2, &srv_idx);
 
-        radio_packet_t tx_packet;
-        tx_packet.type = shot_packet_type;
-        tx_packet.shot.shooter_id = shooter_id;
-        tx_packet.shot.target_id = MY_ID;
+        switch(srv_idx)
+        {
+        case 0: // Shot
+        {
+            int16_t shooter_id = srv_value;
 
-        Radio_Transmit(&tx_packet, RADIO_WAIT_FOR_TX);
+            radio_packet_t tx_packet;
+            tx_packet.type = shot_packet_type;
+            tx_packet.shot.shooter_id = shooter_id;
+            tx_packet.shot.target_id = MY_ID;
 
-        // Clear receive buffer
-        radio_packet_t rx_packet;
-        while(Radio_Receive(&rx_packet) == RADIO_RX_MORE_PACKETS) {}
+            Radio_Transmit(&tx_packet, RADIO_RETURN_ON_TX);
 
+            break;
+        }
+        case 1: // Radio
+        {
+            // Clear receive buffer
+            radio_packet_t rx_packet;
+            while(Radio_Receive(&rx_packet) == RADIO_RX_MORE_PACKETS) {}
+
+            // TODO: Trigger sonar on radio request.
+
+            break;
+        }
+        default:
+            break;
+        }
     }
 }
 
@@ -241,6 +265,8 @@ int r_main()
     pinMode(13, OUTPUT);
 
     // Init radio
+
+    g_radio_service = Service_Init();
 
     init_radio();
 
