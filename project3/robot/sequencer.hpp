@@ -22,6 +22,12 @@ public:
         critical_turn_right
     };
 
+    struct input_t
+    {
+        input_t(): sonar_cm(1000) {}
+        uint16_t sonar_cm;
+    };
+
     struct output_t
     {
         output_t(): coin(false), behavior(seek_straight) {}
@@ -32,6 +38,7 @@ public:
     sequencer(controller::input_t *ctl_in,
               controller::output_t *ctl_out,
               uint16_t ctl_period_ms,
+              sequencer::input_t *seq_in,
               sequencer::output_t *seq_out,
               Service *sonar_request,
               Service *sonar_reply,
@@ -40,6 +47,13 @@ public:
     void run();
 
 private:
+    bool target_visible(const sequencer::input_t & in)
+    {
+        return in.sonar_cm < 250;
+    }
+
+    void get(sequencer::input_t & in);
+
     void set(controller::input_t & in);
     void get(controller::output_t & out);
     void swap(controller::input_t & in, controller::output_t & out);
@@ -56,6 +70,7 @@ private:
     controller::output_t *m_ctl_out;
     uint16_t m_ctl_period_ms;
 
+    sequencer::input_t *m_seq_in;
     sequencer::output_t *m_seq_out;
 
     Service *m_sonar_request;

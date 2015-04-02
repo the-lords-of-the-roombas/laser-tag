@@ -22,6 +22,7 @@ typedef struct radio_packet
         shot_payload shot;
 
         // your other packets...
+        sonar_trigger_payload sonar_trigger;
         debug_payload debug;
     };
 

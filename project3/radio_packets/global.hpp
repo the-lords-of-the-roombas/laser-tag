@@ -5,6 +5,7 @@ enum global_packet_types
 {
     game_status_packet_type = 0,
     shot_packet_type,
+    sonar_trigger_packet_type,
 
     // ... there may be more in future ...
 
@@ -20,6 +21,11 @@ struct shot_payload
 {
     uint8_t target_id;
     uint8_t shooter_id;
+};
+
+struct sonar_trigger_payload
+{
+    uint8_t id;
 };
 
 #endif // GLOBAL_RADIO_PACKETS_INCLUDED

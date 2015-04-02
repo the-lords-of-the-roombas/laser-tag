@@ -51,6 +51,7 @@ Service * volatile g_shot_service;
 irobot g_robot(&Serial1, arduino::pin_baud_rate_change);
 static controller::input_t g_ctl_in;
 static controller::output_t g_ctl_out;
+static sequencer::input_t g_seq_in;
 static sequencer::output_t g_seq_out;
 Service * volatile g_ctl_out_service;
 
@@ -58,7 +59,7 @@ Service * volatile g_ctl_out_service;
 void sequence()
 {
     sequencer seq(&g_ctl_in, &g_ctl_out, control_period_ticks * TICK,
-                  &g_seq_out,
+                  &g_seq_in, &g_seq_out,
                   g_sonar_request_service, g_sonar_reply_service,
                   &g_gun);
     seq.run();
@@ -73,10 +74,11 @@ void control()
 
 void report()
 {
+    ServiceSubscription *sonar_sub = Service_Subscribe(g_sonar_reply_service);
     ServiceSubscription *shot_sub = Service_Subscribe(g_shot_service);
     ServiceSubscription *radio_sub = Service_Subscribe(g_radio_service);
 
-    ServiceSubscription *subs[] = { shot_sub, radio_sub };
+    ServiceSubscription *subs[] = { sonar_sub, shot_sub, radio_sub };
 
     for(;;)
     {
@@ -91,11 +93,24 @@ void report()
         }
 #endif
         unsigned int srv_idx;
-        int16_t srv_value = Service_Receive_Mux(subs, 2, &srv_idx);
+        int16_t srv_value = Service_Receive_Mux(subs, 3, &srv_idx);
 
         switch(srv_idx)
         {
-        case 0: // Shot
+        case 0: // Sonar reply
+        {
+            sequencer::input_t seq_in;
+            int16_t sonar_cycles  = srv_value;
+            seq_in.sonar_cm = sonar::cycles_to_cm(sonar_cycles);
+
+            ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
+            {
+                g_seq_in = seq_in;
+            }
+
+            break;
+        }
+        case 1: // Shot
         {
             int16_t shooter_id = srv_value;
 
@@ -108,13 +123,30 @@ void report()
 
             break;
         }
-        case 1: // Radio
+        case 2: // Radio
         {
-            // Clear receive buffer
             radio_packet_t rx_packet;
-            while(Radio_Receive(&rx_packet) == RADIO_RX_MORE_PACKETS) {}
-
-            // TODO: Trigger sonar on radio request.
+            RADIO_RX_STATUS rx_status = RADIO_RX_MORE_PACKETS;
+            while(rx_status == RADIO_RX_MORE_PACKETS)
+            {
+                rx_status = Radio_Receive(&rx_packet);
+                if ( rx_status == RADIO_RX_MORE_PACKETS ||
+                     rx_status == RADIO_RX_SUCCESS )
+                {
+                    // Packet received
+                    switch(rx_packet.type)
+                    {
+                    case sonar_trigger_packet_type:
+                    {
+                        if (rx_packet.sonar_trigger.id == MY_ID)
+                            Service_Publish(g_sonar_request_service, 0);
+                        break;
+                    }
+                    default:
+                        break;
+                    }
+                }
+            }
 
             break;
         }
