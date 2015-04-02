@@ -44,7 +44,13 @@ private:
     void get(controller::output_t & out);
     void swap(controller::input_t & in, controller::output_t & out);
     void check_bumps(controller::output_t &, behavior_t &);
+    uint16_t read_sonar();
     void wait_ms(uint16_t milliseconds);
+    controller::direction_t opposite(controller::direction_t dir)
+    {
+        return dir == controller::leftward
+                ? controller::rightward : controller::leftward;
+    }
 
     controller::input_t *m_ctl_in;
     controller::output_t *m_ctl_out;

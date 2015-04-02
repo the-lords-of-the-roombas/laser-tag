@@ -148,22 +148,50 @@ void sequencer::run()
         }
         case chase:
         {
-            ctl_in.behavior = controller::chase;
-            ctl_in.speed = controller::super_fast;
-
-            set(ctl_in);
-
             while(next_behavior == chase)
             {
+                ctl_in.behavior = controller::chase;
+                ctl_in.speed = controller::super_fast;
+                set(ctl_in);
+
                 wait_ms(100);
 
-                Service_Publish(m_sonar_request, 0);
-                int16_t sonar_cycles = Service_Receive(m_sonar_reply);
-                uint16_t sonar_cm = sonar::cycles_to_cm(sonar_cycles);
+                uint16_t sonar_cm = read_sonar();
 
                 get(ctl_out);
 
                 bool target_seen = sonar_cm < target_distance_threshold_cm;
+
+                if (!target_seen)
+                {
+                    ctl_in.behavior = controller::move;
+                    ctl_in.speed = controller::slow;
+                    ctl_in.distance = controller::mm_to_distance(120, m_ctl_period_ms);
+                    ctl_in.direction = last_seek_dir;
+                    set(ctl_in);
+                    do
+                    {
+                        wait_ms(100);
+                        target_seen = read_sonar() < target_distance_threshold_cm;
+                        get(ctl_out);
+                    }
+                    while (ctl_out.remaining_distance && !target_seen);
+
+                    if (!target_seen)
+                    {
+                        last_seek_dir = opposite(last_seek_dir);
+                        ctl_in.direction = last_seek_dir;
+                        ctl_in.distance = controller::mm_to_distance(260, m_ctl_period_ms);
+                        set(ctl_in);
+                        do
+                        {
+                            wait_ms(100);
+                            target_seen = read_sonar() < target_distance_threshold_cm;
+                            get(ctl_out);
+                        }
+                        while (ctl_out.remaining_distance && !target_seen);
+                    }
+                }
 
                 if (!target_seen)
                 {
@@ -285,6 +313,14 @@ void sequencer::check_bumps(controller::output_t & out, behavior_t & behavior)
         else
             behavior = critical_turn_left;
     }
+}
+
+uint16_t sequencer::read_sonar()
+{
+    Service_Publish(m_sonar_request, 0);
+    int16_t sonar_cycles = Service_Receive(m_sonar_reply);
+    uint16_t sonar_cm = sonar::cycles_to_cm(sonar_cycles);
+    return sonar_cm;
 }
 
 void sequencer::wait_ms(uint16_t milliseconds)
