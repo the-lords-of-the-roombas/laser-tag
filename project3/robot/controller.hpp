@@ -21,7 +21,6 @@ public:
         wait,
         go,
         chase,
-        shoot,
         move,
     };
 
@@ -85,7 +84,6 @@ public:
     };
 
     controller(irobot *robot,
-               gun *,
                input_t *input,
                output_t *output,
                Service *shot_service,
@@ -142,7 +140,6 @@ private:
     }*/
 
     irobot *m_robot;
-    gun *m_gun;
     input_t *m_input_src;
     output_t *m_output_dst;
     Service *m_shot_service;

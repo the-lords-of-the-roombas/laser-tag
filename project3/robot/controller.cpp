@@ -7,10 +7,9 @@
 namespace robot_tag_game {
 
 controller::controller
-(irobot *robot, gun *g, input_t *input, output_t *output,
+(irobot *robot, input_t *input, output_t *output,
  Service *shot_service, uint16_t period_ms):
     m_robot(robot),
-    m_gun(g),
     m_input_src(input),
     m_output_dst(output),
     m_shot_service(shot_service),
@@ -36,9 +35,6 @@ void controller::run()
 {
     int back_up_time = 0;
     int ban_travel_time = 0;
-
-    bool was_shooting = false;
-    int shooting_phase = 0;
 
     uint8_t last_ir = 0;
 
@@ -93,11 +89,6 @@ void controller::run()
         //int16_t prox_weights[] = { -60, -26, -8, 26, 50, 102 };
 
         bool object_centered = false;
-
-        if (!was_shooting && input.behavior == shoot)
-            shooting_phase = 5;
-        else
-            shooting_phase = trail_filter(shooting_phase);
 
         // Compute controls
 
@@ -156,19 +147,6 @@ void controller::run()
             else
             {
                 velocity = input_velocity;
-            }
-            break;
-        }
-        case shoot:
-        {
-            if (shooting_phase == 5)
-            {
-                //digitalWrite(13, HIGH);
-                m_gun->send('x');
-            }
-            else
-            {
-                //digitalWrite(13, LOW);
             }
             break;
         }
@@ -231,8 +209,6 @@ void controller::run()
 
         // Update feed back input
 
-        was_shooting = input.behavior == shoot;
-
         {
             int distance_to_go = input.distance - distance_travelled;
             if (distance_to_go < 0)
@@ -263,7 +239,6 @@ void controller::run()
                 m_sensors.proximity[4] > 50 ||
                 m_sensors.proximity[5] > 50;
         output.object_centered = object_centered;
-        output.done_shooting = input.behavior == shoot && shooting_phase == 0;
         output.remaining_distance = input.distance;
 
         // Sync shared memory (input, output):

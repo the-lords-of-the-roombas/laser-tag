@@ -174,7 +174,7 @@ void sequence()
 
 void control()
 {
-    controller ctl(&g_robot, &g_gun, &g_ctl_in, &g_ctl_out, g_shot_service,
+    controller ctl(&g_robot, &g_ctl_in, &g_ctl_out, g_shot_service,
                    control_period_ticks * TICK);
     ctl.run();
 }
