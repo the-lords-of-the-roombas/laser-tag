@@ -145,7 +145,7 @@ struct service_subscription
     struct service *service;
     struct service_subscription *next;
     task_descriptor_t *subscriber;
-    bool waiting;
+    volatile bool waiting;
     volatile bool unread;
 };
 

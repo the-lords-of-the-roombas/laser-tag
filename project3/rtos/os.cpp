@@ -933,10 +933,9 @@ static void kernel_service_publish()
 
         sub->unread = true;
 
-        if (sub->waiting)
+        if (sub->waiting && sub->subscriber->state == WAITING)
         {
             kernel_enqueue_task(sub->subscriber);
-            sub->waiting = false;
         }
 
         sub = sub->next;
@@ -952,11 +951,6 @@ static void kernel_service_publish()
 
 static void kernel_service_receive()
 {
-    ServiceSubscription *sub = requested_service_subscription;
-    kernel_assert(sub->subscriber == cur_task);
-
-    sub->waiting = true;
-
     cur_task->state = WAITING;
 }
 
@@ -1481,15 +1475,64 @@ int16_t Service_Receive(ServiceSubscription *sub)
 
     if (!sub->unread)
     {
+        sub->waiting = true;
+
         kernel_request = SERVICE_RECEIVE;
-        requested_service_subscription = sub;
         enter_kernel();
+
+        sub->waiting = false;
     }
 
     value = sub->service->value;
     sub->unread = false;
 
     SREG = sreg;
+
+    return value;
+}
+
+int16_t Service_Receive_Mux( ServiceSubscription **array, unsigned int count,
+                             unsigned int * out_rcv_index )
+{
+    int16_t value;
+    unsigned int rcv_idx = -1;
+
+    uint8_t sreg = SREG;
+    Disable_Interrupt();
+
+    for (rcv_idx = 0; rcv_idx < count; ++rcv_idx)
+    {
+        if (array[rcv_idx]->unread)
+            break;
+    }
+
+    if (rcv_idx == count)
+    {
+        for (unsigned int i = 0; i < count; ++i)
+            array[i]->waiting = true;
+
+        kernel_request = SERVICE_RECEIVE;
+        enter_kernel();
+
+        for (unsigned int i = 0; i < count; ++i)
+        {
+            array[i]->waiting = false;
+
+            if (i < rcv_idx && array[i]->unread)
+                rcv_idx = i;
+        }
+    }
+
+    kernel_assert(rcv_idx < count);
+
+    ServiceSubscription *sub = array[rcv_idx];
+    value = sub->service->value;
+    sub->unread = false;
+
+    SREG = sreg;
+
+    if (out_rcv_index)
+        *out_rcv_index = rcv_idx;
 
     return value;
 }

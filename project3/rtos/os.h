@@ -326,6 +326,14 @@ ServiceSubscription *Service_Subscribe( Service *s );
 // If all values have been read, wait until a new value is published.
 int16_t Service_Receive( ServiceSubscription * );
 
+// Receive the last published and unread value on any of the "count" service
+// subscriptions in the "array".
+// If all values have been read, wait until a new value is published.
+// "index" is set to the index of the service in "array" that has an unread
+// value.
+int16_t Service_Receive_Mux( ServiceSubscription **array, unsigned int count,
+                             unsigned int * index );
+
 // Publish a new value to a service.
 // All tasks currently currently waiting for new values on
 // subscriptions to this service become ready.
