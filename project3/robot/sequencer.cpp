@@ -49,7 +49,7 @@ void sequencer::run()
     controller::direction_t last_seek_dir = controller::leftward;
 
 
-    static const int target_distance_threshold_cm = 100;
+    static const int target_distance_threshold_cm = 250;
 
     for(;;)
     {
@@ -165,13 +165,13 @@ void sequencer::run()
                 if (!target_seen)
                 {
                     ctl_in.behavior = controller::move;
-                    ctl_in.speed = controller::slow;
-                    ctl_in.distance = controller::mm_to_distance(120, m_ctl_period_ms);
+                    ctl_in.speed = controller::super_slow;
+                    ctl_in.distance = controller::mm_to_distance(80, m_ctl_period_ms);
                     ctl_in.direction = last_seek_dir;
                     set(ctl_in);
                     do
                     {
-                        wait_ms(100);
+                        wait_ms(140);
                         target_seen = read_sonar() < target_distance_threshold_cm;
                         get(ctl_out);
                     }
@@ -185,7 +185,7 @@ void sequencer::run()
                         set(ctl_in);
                         do
                         {
-                            wait_ms(100);
+                            wait_ms(140);
                             target_seen = read_sonar() < target_distance_threshold_cm;
                             get(ctl_out);
                         }
