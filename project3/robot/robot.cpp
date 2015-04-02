@@ -187,6 +187,7 @@ int r_main()
             OS_Abort();
     }
 
+#if 0
     for(int i = 0; i < 3; ++i)
     {
         digitalWrite(13, HIGH);
@@ -194,6 +195,7 @@ int r_main()
         digitalWrite(13, LOW);
         delay(300);
     }
+#endif
 
     // Make sure all shared memory initialization is finished.
 
