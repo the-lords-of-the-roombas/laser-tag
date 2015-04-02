@@ -24,3 +24,8 @@ target_link_libraries(test-ir rtos irobot arduino)
 
 add_arduino_executable(robot robot.cpp controller.cpp sequencer.cpp sonar.cpp gun.cpp)
 target_link_libraries(robot radio irobot rtos arduino)
+
+## Dummy
+
+add_arduino_executable(dummy dummy.cpp)
+target_link_libraries(dummy irobot arduino)
