@@ -19,3 +19,6 @@ build project1-phase2.html: pandoc project1_phase2.rst | style.css
 
 build project2/project2.html: pandoc project2/project2.rst | style.css
   css=../style.css
+
+build project3/project3.html: pandoc project3/project3.rst | style.css
+  css=../style.css
