@@ -78,6 +78,8 @@ void report()
 
     ServiceSubscription *subs[] = { sonar_sub, shot_sub, radio_sub };
 
+    uint8_t last_shooter_id = 0;
+
     for(;;)
     {
 #if 0
@@ -110,15 +112,7 @@ void report()
         }
         case 1: // Shot
         {
-            int16_t shooter_id = srv_value;
-
-            radio_packet_t tx_packet;
-            tx_packet.type = shot_packet_type;
-            tx_packet.shot.shooter_id = shooter_id;
-            tx_packet.shot.target_id = MY_ID;
-
-            Radio_Transmit(&tx_packet, RADIO_RETURN_ON_TX);
-
+            last_shooter_id = srv_value;
             break;
         }
         case 2: // Radio
@@ -137,7 +131,23 @@ void report()
                     case sonar_trigger_packet_type:
                     {
                         if (rx_packet.sonar_trigger.id == MY_ID)
+                        {
+                            // Trigger sonar
                             Service_Publish(g_sonar_request_service, 0);
+
+                            // Reply with shot packet
+                            if (last_shooter_id != 0)
+                            {
+                                radio_packet_t tx_packet;
+                                tx_packet.type = shot_packet_type;
+                                tx_packet.shot.shooter_id = last_shooter_id;
+                                tx_packet.shot.target_id = MY_ID;
+
+                                Radio_Transmit(&tx_packet, RADIO_RETURN_ON_TX);
+
+                                last_shooter_id = 0;
+                            }
+                        }
                         break;
                     }
                     default:
