@@ -3,8 +3,7 @@
 #include "../radio_packets/radio_packets.hpp"
 #include <Arduino.h>
 
-static uint8_t radio_base_address[5] = BASE_RADIO_ADDRESS;
-static uint8_t radio_robot0_address[5] = ROBOT_0_RADIO_ADDRESS;
+static uint8_t bot_ids[4] = { 'A', 'B', 'C', 'D' };
 
 static int radio_power_pin = 10;
 
@@ -14,14 +13,9 @@ void radio_rxhandler(uint8_t pipenumber)
 }
 }
 
-int main()
+
+void init_radio()
 {
-    // Init Arduino library
-    init();
-
-    pinMode(13, OUTPUT);
-    Serial.begin(9600);
-
     // Start up radio
     pinMode(radio_power_pin, OUTPUT);
 
@@ -30,16 +24,63 @@ int main()
     digitalWrite(radio_power_pin, HIGH);
     delay(100);
 
+    uint8_t radio_base_address[5] = BASE_RADIO_ADDRESS;
 
     Radio_Init(RADIO_CHANNEL);
-
     // configure the receive settings for radio pipe 0
     Radio_Configure_Rx(RADIO_PIPE_0, radio_base_address, ENABLE);
     // configure radio transceiver settings
     Radio_Configure(RADIO_RATE, RADIO_HIGHEST_POWER);
+}
 
-    // set destination address
-    Radio_Set_Tx_Addr(radio_robot0_address);
+void handle_packet( const radio_packet_t & rx_pkt )
+{
+    switch(rx_pkt.type)
+    {
+    case shot_packet_type:
+    {
+        Serial.print("SHOT: ");
+        Serial.print("Shooter = ");
+        Serial.print(rx_pkt.shot.shooter_id);
+        Serial.print(" / Target = ");
+        Serial.print(rx_pkt.shot.target_id);
+        Serial.println();
+        break;
+    }
+    default:
+        Serial.println("Received unexpected packet type!");
+        break;
+    }
+}
+
+void transmit_sonar_trigger_packet(uint8_t bot_id)
+{
+    radio_packet_t tx_pkt;
+    tx_pkt.type = sonar_trigger_packet_type;
+    tx_pkt.sonar_trigger.id = bot_id;
+
+    uint8_t bot_address[5] = { BOT_RADIO_ADDRESS_PREFIX, bot_id };
+
+    Radio_Set_Tx_Addr(bot_address);
+
+    Radio_Transmit(&tx_pkt, RADIO_RETURN_ON_TX);
+}
+
+int main()
+{
+    // Init Arduino library
+    init();
+
+    // Init user communication
+    pinMode(13, OUTPUT);
+    Serial.begin(9600);
+
+    // Init radio
+    init_radio();
+
+    unsigned int bot_id_index = 0;
+
+    unsigned long then = millis();
 
     for(;;)
     {
@@ -48,86 +89,24 @@ int main()
         if (rx_status == RADIO_RX_SUCCESS || rx_status == RADIO_RX_MORE_PACKETS)
         {
             digitalWrite(13, HIGH);
-            switch(rx_pkt.type)
-            {
-            case game_status_packet_type:
-                break;
-            case shot_packet_type:
-            {
-                Serial.print("SHOT: ");
-                Serial.print("Shooter = ");
-                Serial.print(rx_pkt.shot.shooter_id);
-                Serial.print(" / Target = ");
-                Serial.print(rx_pkt.shot.target_id);
-                Serial.println();
-                break;
-            }
-            case debug_packet_type:
-            {
-                Serial.println("---");
-
-                Serial.print("Bumps: ");
-                Serial.print(rx_pkt.debug.bump_left);
-                Serial.print(" ");
-                Serial.print(rx_pkt.debug.bump_right);
-                Serial.println();
-
-                Serial.print("Object: ");
-                Serial.print(rx_pkt.debug.object_left);
-                Serial.print(" ");
-                Serial.print(rx_pkt.debug.object_right);
-                Serial.println();
-
-                Serial.print("Coin:");
-                Serial.println(rx_pkt.debug.coin);
-
-                Serial.print("Bhavior:");
-                Serial.println(rx_pkt.debug.seq_behavior);
-#if 0
-                Serial.print("Behavior: ");
-                Serial.print(rx_pkt.debug.ctl_behavior);
-                Serial.println();
-
-                Serial.print("Sonar: ");
-                Serial.print(rx_pkt.debug.sonar_cm);
-                Serial.println();
-
-                Serial.print("Seeking: ");
-                Serial.print(rx_pkt.debug.obj_motion);
-                Serial.print(" ");
-                Serial.println(rx_pkt.debug.obj_seek);
-
-                Serial.print("Last dir: ");
-                Serial.println(rx_pkt.debug.last_dir);
-                Serial.print("Radius: ");
-                Serial.println(rx_pkt.debug.radius);
-#endif
-
-
-
-#if 0
-                Serial.print("Proximity:");
-                for (int i = 0; i < 3; ++i)
-                {
-                    Serial.print(rx_pkt.debug.proximities[i]);
-                    Serial.write(' ');
-                }
-                Serial.println();
-#endif
-                //Serial.print("P C = ");
-                //Serial.println(rx_pkt.debug.proximity_center);
-
-                break;
-            }
-            default:
-                Serial.println("Unknown packet type!");
-                break;
-            }
+            handle_packet(rx_pkt);
         }
         else
         {
-            delay(100);
             digitalWrite(13, LOW);
+        }
+
+        unsigned int now = millis();
+
+        if (now - then >= 50)
+        {
+            then = now;
+
+            transmit_sonar_trigger_packet(bot_ids[bot_id_index]);
+
+            ++bot_id_index;
+            if(bot_id_index > 4)
+                bot_id_index = 0;
         }
     }
 }

@@ -23,8 +23,6 @@ enum navigation_state
 
 // Radio
 
-static uint8_t radio_base_address[5] = BASE_RADIO_ADDRESS;
-static uint8_t radio_robot0_address[5] = ROBOT_0_RADIO_ADDRESS;
 static uint16_t volatile control_period_ticks = 5;
 
 static Service * volatile g_radio_service = 0;
@@ -165,6 +163,9 @@ void sonar_task()
 
 void init_radio()
 {
+    static uint8_t radio_base_address[5] = BASE_RADIO_ADDRESS;
+    static uint8_t radio_robot_address[5] = { BOT_RADIO_ADDRESS_PREFIX, MY_ID };
+
     // Start up radio
     pinMode(arduino::pin_radio_vcc, OUTPUT);
 
@@ -176,7 +177,7 @@ void init_radio()
     Radio_Init(RADIO_CHANNEL);
 
     // configure the receive settings for radio pipe 0
-    Radio_Configure_Rx(RADIO_PIPE_0, radio_robot0_address, ENABLE);
+    Radio_Configure_Rx(RADIO_PIPE_0, radio_robot_address, ENABLE);
     // configure radio transceiver settings
     Radio_Configure(RADIO_RATE, RADIO_HIGHEST_POWER);
 

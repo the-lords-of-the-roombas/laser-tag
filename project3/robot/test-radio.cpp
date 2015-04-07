@@ -8,7 +8,7 @@
 using namespace robot_tag_game;
 
 static uint8_t radio_base_address[5] = BASE_RADIO_ADDRESS;
-static uint8_t radio_robot0_address[5] = ROBOT_0_RADIO_ADDRESS;
+static uint8_t radio_robot0_address[5] = { 'B', 'O', 'T', '_', MY_ID };
 
 extern "C" {
 void radio_rxhandler(uint8_t pipenumber)
