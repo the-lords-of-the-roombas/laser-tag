@@ -72,7 +72,7 @@ void control()
     ctl.run();
 }
 
-void coordinate()
+void report()
 {
     ServiceSubscription *sonar_sub = Service_Subscribe(g_sonar_reply_service);
     ServiceSubscription *shot_sub = Service_Subscribe(g_shot_service);
@@ -235,7 +235,7 @@ int r_main()
 
     // Create tasks
 
-    Task_Create_RR(coordinate, 0);
+    Task_Create_RR(report, 0);
 
     Task_Create_System(sonar_task, 0);
 
