@@ -5,7 +5,15 @@
 
 static uint8_t bot_ids[4] = { 'A', 'B', 'C', 'D' };
 
+static uint16_t shots_given[4] = { 0, 0, 0, 0 };
+static uint16_t shots_received[4] = { 0, 0, 0, 0 };
+
 static int radio_power_pin = 10;
+
+unsigned int index_from_bot_id( uint8_t id )
+{
+    return id - 'A';
+}
 
 extern "C" {
 void radio_rxhandler(uint8_t pipenumber)
@@ -33,18 +41,49 @@ void init_radio()
     Radio_Configure(RADIO_RATE, RADIO_HIGHEST_POWER);
 }
 
+void print_result()
+{
+    Serial.println("GAME STATUS:");
+    for (unsigned int i = 0; i < 4; ++i)
+    {
+        Serial.print(bot_ids[i]);
+        Serial.print(":");
+        Serial.print(shots_given[i]);
+        Serial.print("/");
+        Serial.print(shots_received[i]);
+        Serial.print(" ");
+    }
+    Serial.println();
+}
+
 void handle_packet( const radio_packet_t & rx_pkt )
 {
     switch(rx_pkt.type)
     {
     case shot_packet_type:
     {
+        unsigned int shooter_idx = index_from_bot_id(rx_pkt.shot.shooter_id);
+        unsigned int target_idx = index_from_bot_id(rx_pkt.shot.target_id);
+
+        if ( shooter_idx >= 4 || target_idx >= 4 )
+        {
+            Serial.print("Unexpected bot ID!");
+        }
+        else
+        {
+            ++shots_given[shooter_idx];
+            ++shots_received[target_idx];
+        }
+
         Serial.print("SHOT: ");
         Serial.print("Shooter = ");
         Serial.print(rx_pkt.shot.shooter_id);
         Serial.print(" / Target = ");
         Serial.print(rx_pkt.shot.target_id);
         Serial.println();
+
+        print_result();
+
         break;
     }
     default:
@@ -77,6 +116,10 @@ int main()
 
     // Init radio
     init_radio();
+
+    // Announce start of game
+    Serial.println("Battle begins!");
+    print_result();
 
     unsigned int bot_id_index = 0;
 
