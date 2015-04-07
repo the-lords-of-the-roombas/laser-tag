@@ -105,7 +105,7 @@ int main()
             transmit_sonar_trigger_packet(bot_ids[bot_id_index]);
 
             ++bot_id_index;
-            if(bot_id_index > 4)
+            if(bot_id_index >= 4)
                 bot_id_index = 0;
         }
     }
