@@ -7,6 +7,7 @@ static uint8_t bot_ids[4] = { 'A', 'B', 'C', 'D' };
 
 static uint16_t shots_given[4] = { 0, 0, 0, 0 };
 static uint16_t shots_received[4] = { 0, 0, 0, 0 };
+static unsigned long last_shot_time[4] = { 0, 0, 0, 0 };
 
 static int radio_power_pin = 10;
 
@@ -68,21 +69,27 @@ void handle_packet( const radio_packet_t & rx_pkt )
         if ( shooter_idx >= 4 || target_idx >= 4 )
         {
             Serial.print("Unexpected bot ID!");
+            Serial.print("Shooter = ");
+            Serial.print(rx_pkt.shot.shooter_id);
+            Serial.print(" / Target = ");
+            Serial.print(rx_pkt.shot.target_id);
+            Serial.println();
         }
-        else
+        else if (millis() - last_shot_time[shooter_idx] >= 3000)
         {
             ++shots_given[shooter_idx];
             ++shots_received[target_idx];
+            last_shot_time[shooter_idx] = millis();
+
+            Serial.print("SHOT: ");
+            Serial.print("Shooter = ");
+            Serial.print(rx_pkt.shot.shooter_id);
+            Serial.print(" / Target = ");
+            Serial.print(rx_pkt.shot.target_id);
+            Serial.println();
+
+            print_result();
         }
-
-        Serial.print("SHOT: ");
-        Serial.print("Shooter = ");
-        Serial.print(rx_pkt.shot.shooter_id);
-        Serial.print(" / Target = ");
-        Serial.print(rx_pkt.shot.target_id);
-        Serial.println();
-
-        print_result();
 
         break;
     }
