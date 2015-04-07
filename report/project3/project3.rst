@@ -26,6 +26,7 @@ Robot Components
 
 Each robot extends the iRobot Create 2 platform (at least)
 with the following components:
+- Wireless radio transciever.
 - Infra-red (IR) LED emitter, serving as a gun.
 - Ultra-sound distance sensor, used to detect other robots (sonar)
 - An object installed on top of the robot to facilitate detection by sonar,
@@ -99,4 +100,17 @@ between the same shooter and target with less than 5 seconds intermediate time.
 Robot System Design
 *******************
 
+In order to implement the required behavior for the game, the iRobot Create 2
+platform had to be integrated with a wireless transciever, an ultra-sound
+distance sensor and na IR LED using an Arduino board with an AVR ATMega 2560
+microprocessor. The nature of each of these hardware components and the
+required interaction with the microprocessor differ greatly, as far as relation
+to real time is concerned. A **real-time operating system (RTOS)**, developed in
+project 2 and extended in this project, was of great assistance in implementing
+functional, robust, maintainable software.
+
+Our software organization is inspired by the 3-layer architecture as defined by
+Firby (Adaptive execution in complex dynamic worlds, 1990), and
+further explored by Gat (On Three-Layer Architectures, 1998).
+On the lowest level is the controller
 
