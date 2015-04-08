@@ -32,12 +32,12 @@ Overview
 Game Rules
 ----------
 
-Some teams decided to implement completely autonomous robots (no human control).
+As a group, we decided to implement completely autonomous robots (no human control).
 Since this is quite a big challenge in itself, we decided to keep the rules
 of the game rather simple: The goal of each robot is to shoot any other robot as
 many times as possible and to get shot as few times as possible within the time
 limit of the game. A shot by a robot is only valid when it occurs at least 5
-seconds after its previous shot of the same target robot.
+seconds after its previous shot.
 
 Robot Components
 ----------------
@@ -114,7 +114,7 @@ and immediately after receiving a sonar-trigger packet.
 The base station counts the number of times each robot has successfully shot
 another one, and the number of times it has been shot, based on the wireless
 packets received from the robots. The base station will disregard shots
-between the same shooter and target with less than 5 seconds intermediate time.
+from the same shooter with less than 5 seconds intermediate time.
 
 Robot System Design
 *******************
@@ -144,6 +144,13 @@ the sonar and the gun are implemented as fairly self-contained subsystems
 with a minimal interface, which allows to easily test them individually,
 and which was useful during development while experimenting with their
 placement within the entire system.
+
+In the diagram below, the base station and the robot subsystems are
+represented by rectangles with bold continous outline. The rectangles
+with dotted outlines represent data. Green arrows represent
+wireless communication, red arrows represent wired serial communication,
+and blue arrows represent data flow internal to the robot system
+(RTOS services, shared memory, etc...):
 
 .. image:: architecture-out.svg
 
