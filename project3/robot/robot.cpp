@@ -83,16 +83,6 @@ void coordinate()
 
     for(;;)
     {
-#if 0
-        controller::output_t ctl_out;
-        sequencer::output_t seq_out;
-
-        ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
-        {
-            ctl_out = g_ctl_out;
-            seq_out = g_seq_out;
-        }
-#endif
         unsigned int srv_idx;
         int16_t srv_value = Service_Receive_Mux(subs, 3, &srv_idx);
 
@@ -237,16 +227,6 @@ int r_main()
         if (mode != 3)
             OS_Abort();
     }
-
-#if 0
-    for(int i = 0; i < 3; ++i)
-    {
-        digitalWrite(13, HIGH);
-        delay(300);
-        digitalWrite(13, LOW);
-        delay(300);
-    }
-#endif
 
     // Make sure all shared memory initialization is finished.
 
