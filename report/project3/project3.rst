@@ -14,9 +14,17 @@ In a group with 3 other teams:
 
 Code: https://github.com/the-lords-of-the-roombas/laser-tag/tree/master/project3
 
-Demo video - Robot: http://webhome.csc.uvic.ca/~jleben/csc560/project3/csc560-demo.mp4
+`Demo video - Robot <https://vimeo.com/124444439>`__:
 
-Demo video - Gameplay: https://www.youtube.com/watch?v=Xwt1jkmxIGU
+.. raw:: html
+
+  <iframe src="https://player.vimeo.com/video/124444439" width="600" height="337" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
+
+`Demo video - Gameplay <https://www.youtube.com/watch?v=Xwt1jkmxIGU>`__:
+
+.. raw:: html
+
+  <iframe width="600" height="337" src="https://www.youtube.com/embed/Xwt1jkmxIGU" frameborder="0" allowfullscreen></iframe>
 
 Overview
 ********
@@ -386,3 +394,60 @@ and waiting for the publish event.
 For the purpose of the coordinator layer, we extended the RTOS with
 the ``Service_Receive_Mux`` function which allows a task to wait on
 multiple services simultaneously.
+
+Issues
+******
+
+The available sensors were a great limitation to implementation of successful
+autonomous robots. Most significantly, the sonar which only detects presence
+of other robots in a single direction makes tracking their movement very
+impractical and, at best, hardly useful. We have alleviated this by
+using a small playground, so that it is more probable for robots to see each
+other.
+
+The wide angle of sonar required it to be tilted up signficantly in order not
+to confuse playground walls for other robots, which on the other hand
+reduced visibility of the robots. The cardboard mounted on top of
+the robots did not help much.
+
+We did not get very suitable material to construct playground walls just high
+enough. The walls use in the demo video are slightly too low to be detected by
+the close-proximity IR sensors, so the robots often bump into walls and must
+rely on the poorer 2-dimensional bump sensors rather than 6-dimensional IR
+sensors for wall avoidance.
+
+We used parts of the Arduino library, most notably the HardwareSerial library
+for communication with the iRobot platform. The Arduino library initialization
+routine affects hardware timer configuration, so we called it before the
+RTOS initialization routine, so that the latter could override the
+configuration. However, the Arduino initialization also globally enables interrupts,
+but the RTOS initailization - as was initially provided to us - did not
+explicitly disable them. Before this was detected, it caused the RTOS to run all
+the time with interrupts enabled, causing the most unexpected behaviors and many
+terrible hours of debugging.
+
+Moreover, the radio library that was provided to us is completely unsuitable
+for multi-tasking - it accesses shared hardware registers without disabling
+interrupts. On quick code inspection, it also does not seem that
+the radio interrupt handling code is quite safe for concurrency with the radio
+library routines. We solved these issues by explicitly disabling interrupts
+whenever calling a radio library routine. However, this is rather suboptimal,
+because the routines internally waste some time waiting for hardware, during
+which time no interrupt can be handled. The greatest potentail timing issue is
+side-stepped by not waiting for the ACK response when transmitting packets.
+
+Conclusion
+**********
+
+Despite great limitations imposed by the available hardware, we have managed to
+create a robot that can play our designed game autonomously. Translating the
+theory of the 3-layer architecture into practice was an intriguing and
+satisfying challenge. It contributed to a robot which is highly reponsive to
+critical situations, but also able of somewhat sophisticated higher-level
+behavioral patterns. Inspired by the desire for coherence and well-structured
+code, as required by this particular application, we creatively adapted and
+extended the RTOS. We successfully coordinated the inter-system aspects of the
+project with other teams in the group. Unfortunately however, only one other
+team completed their robot, while two other teams needed assistance in order to
+be included in the game. Nevertheless, through collaboration, we achieved a
+functional game of fully-autonomous robots.
