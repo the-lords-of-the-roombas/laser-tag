@@ -49,7 +49,7 @@ public:
 private:
     bool target_visible(const sequencer::input_t & in)
     {
-        return in.sonar_cm < 250;
+        return in.sonar_cm < 100;
     }
 
     void get(sequencer::input_t & in);

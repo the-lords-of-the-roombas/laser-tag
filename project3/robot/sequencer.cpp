@@ -189,7 +189,7 @@ void sequencer::run()
                 {
                     next_behavior = seek_straight;
                 }
-                else if (ctl_out.object_centered)
+                else if (seq_in.sonar_cm <= 20 || ctl_out.object_centered)
                 {
                     next_behavior = shoot;
                 }
@@ -227,9 +227,11 @@ void sequencer::run()
                     while (ctl_out.remaining_distance);
                 }
 
+                wait_ms(30);
+
                 m_gun->send(MY_ID);
 
-                wait_ms(70);
+                wait_ms(30);
             }
 
             next_behavior = critical_turn_right;
@@ -243,7 +245,7 @@ void sequencer::run()
             ctl_in.direction = (behavior == critical_turn_left) ?
                         controller::leftward : controller::rightward;
             ctl_in.speed = controller::fast;
-            ctl_in.distance = controller::mm_to_distance(300, m_ctl_period_ms);
+            ctl_in.distance = controller::mm_to_distance(150, m_ctl_period_ms);
 
             set(ctl_in);
             do { wait_ms(25); get(ctl_out); }
