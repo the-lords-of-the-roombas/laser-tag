@@ -16,9 +16,12 @@ unsigned int index_from_bot_id( uint8_t id )
     return id - 'A';
 }
 
+volatile bool g_got_packets = false;
+
 extern "C" {
 void radio_rxhandler(uint8_t pipenumber)
 {
+    g_got_packets = true;
 }
 }
 
@@ -68,7 +71,7 @@ void handle_packet( const radio_packet_t & rx_pkt )
 
         if ( shooter_idx >= 4 || target_idx >= 4 )
         {
-            Serial.print("Unexpected bot ID!");
+            Serial.println("Unexpected bot ID!");
             Serial.print("Shooter = ");
             Serial.print((char) rx_pkt.shot.shooter_id);
             Serial.print(" / Target = ");
@@ -106,6 +109,7 @@ void transmit_sonar_trigger_packet(uint8_t bot_id)
     tx_pkt.sonar_trigger.id = bot_id;
 
     uint8_t bot_address[5] = { BOT_RADIO_ADDRESS_PREFIX, bot_id };
+    //uint8_t bot_address[5] = { 'B', 'O', 'T', '_', 'C' };
 
     Radio_Set_Tx_Addr(bot_address);
 
@@ -132,18 +136,37 @@ int main()
 
     unsigned long then = millis();
 
+    bool got_packets = false;
+
     for(;;)
     {
-        radio_packet_t rx_pkt;
-        RADIO_RX_STATUS rx_status = Radio_Receive(&rx_pkt);
-        if (rx_status == RADIO_RX_SUCCESS || rx_status == RADIO_RX_MORE_PACKETS)
+        if (!got_packets)
         {
-            digitalWrite(13, HIGH);
-            handle_packet(rx_pkt);
+            cli();
+            got_packets = g_got_packets;
+            g_got_packets = false;
+            sei();
         }
-        else
+
+        if (got_packets)
         {
-            digitalWrite(13, LOW);
+            //digitalWrite(13, HIGH);
+
+            radio_packet_t rx_pkt;
+            RADIO_RX_STATUS rx_status = Radio_Receive(&rx_pkt);
+            if (rx_status == RADIO_RX_SUCCESS || rx_status == RADIO_RX_MORE_PACKETS)
+            {
+                //Serial.println("packet!");
+
+                handle_packet(rx_pkt);
+            }
+
+            got_packets = rx_status == RADIO_RX_MORE_PACKETS;
+
+            if (!got_packets)
+            {
+                //digitalWrite(13, LOW);
+            }
         }
 
         unsigned int now = millis();
