@@ -30,7 +30,8 @@ static Service * volatile g_radio_service = 0;
 extern "C" {
 void radio_rxhandler(uint8_t pipenumber)
 {
-    Service_Publish(g_radio_service, pipenumber);
+    if (g_radio_service)
+        Service_Publish(g_radio_service, pipenumber);
 }
 }
 
@@ -70,7 +71,7 @@ void control()
     ctl.run();
 }
 
-void report()
+void coordinate()
 {
     ServiceSubscription *sonar_sub = Service_Subscribe(g_sonar_reply_service);
     ServiceSubscription *shot_sub = Service_Subscribe(g_shot_service);
@@ -121,7 +122,10 @@ void report()
             RADIO_RX_STATUS rx_status = RADIO_RX_MORE_PACKETS;
             while(rx_status == RADIO_RX_MORE_PACKETS)
             {
-                rx_status = Radio_Receive(&rx_packet);
+                ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+                    rx_status = Radio_Receive(&rx_packet);
+                }
+
                 if ( rx_status == RADIO_RX_MORE_PACKETS ||
                      rx_status == RADIO_RX_SUCCESS )
                 {
@@ -143,7 +147,9 @@ void report()
                                 tx_packet.shot.shooter_id = last_shooter_id;
                                 tx_packet.shot.target_id = MY_ID;
 
-                                Radio_Transmit(&tx_packet, RADIO_RETURN_ON_TX);
+                                ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+                                    Radio_Transmit(&tx_packet, RADIO_RETURN_ON_TX);
+                                }
 
                                 last_shooter_id = 0;
                             }
@@ -203,6 +209,8 @@ int r_main()
 
     g_radio_service = Service_Init();
 
+    memory_barrier();
+
     init_radio();
 
     // Init sonar
@@ -246,7 +254,7 @@ int r_main()
 
     // Create tasks
 
-    Task_Create_RR(report, 0);
+    Task_Create_RR(coordinate, 0);
 
     Task_Create_System(sonar_task, 0);
 
