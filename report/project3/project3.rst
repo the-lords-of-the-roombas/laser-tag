@@ -4,7 +4,13 @@ CSC 460/560: Design and Analysis of Real-Time Systems
 Project 3
 =========
 
-Authors: Jakob Leben and Darren Prince
+Team: **Jakob Leben and Darren Prince**
+
+In a group with 3 other teams:
+
+  - Saleh Almuqbil and Jorge Conde
+  - Jeff ten Have and Colin Knowles
+  - Nathan Vandenberg
 
 Code: https://github.com/the-lords-of-the-roombas/laser-tag/tree/master/project3
 
@@ -107,7 +113,7 @@ Robot System Design
 
 In order to implement the required behavior for the game, the iRobot Create 2
 platform had to be integrated with a wireless transciever, an ultra-sound
-distance sensor and na IR LED using an Arduino board with an AVR ATMega 2560
+distance sensor and na IR LED using an **Arduino** board with an **AVR ATMega 2560**
 microprocessor. The nature of each of these hardware components and the
 required interaction with the microprocessor differ greatly, as far as relation
 to real time is concerned. A **real-time operating system (RTOS)**, developed in
@@ -340,13 +346,42 @@ For the purpose of the coordinator, the RTOS was extended with the ability
 to **wait for multiple services simultaneously** (see section Extensions to RTOS
 below).
 
+Base Station
+************
+
+Our base station implementation was shared by the entire group of 4 teams:
+
+https://github.com/the-lords-of-the-roombas/laser-tag/blob/master/project3/base/base.cpp
+
+It is fairly simple and did not require the RTOS. It repeatedly reads and
+handles all radio packets received from any robot. Meanwhile, it sends
+a sonar-trigger packet every 50 ms to a different robot. It remembers the
+last time a shot-packet was received for each shooter. When a shot-packet
+arrives at least 5 seconds after the last time for the same shooter, it
+increases the count of shots given by the shooter and shots received by the
+target. This information is printed through the Arduino's serial interface
+connected to its USB port, in format::
+
+    <robot ID>: <shots given>/<shots received> ...
+
+Here is a sample output, in form of a screenshot from the
+Arduino IDE's serial monitor:
+
+.. image:: game-status.png
+
 
 Extensions to RTOS
 ******************
 
-We introduced the new ``Service_Receive`` function which allows reception
-of values published when the subscribed task was not blocked waiting on the
-service for new values.
+We changed the API and semantics of services so as to better fit the
+purpose of this project. The ``Service_Subscribe`` only returns a
+``ServiceSubscription`` object which is used by the calling task to
+wait for and receive values over the service. We introduced the
+``Service_Receive`` function which is used with a ``ServiceSubscription`` object
+to read the last published and unread value over the service, or wait for
+the next unread value if all have been read. This allows reception of
+values even after they were published without the subscriber being blocked
+and waiting for the publish event.
 
 For the purpose of the coordinator layer, we extended the RTOS with
 the ``Service_Receive_Mux`` function which allows a task to wait on
