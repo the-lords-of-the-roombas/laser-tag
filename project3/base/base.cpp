@@ -47,7 +47,7 @@ void print_result()
     Serial.println("GAME STATUS:");
     for (unsigned int i = 0; i < 4; ++i)
     {
-        Serial.print(bot_ids[i]);
+        Serial.print((char) bot_ids[i]);
         Serial.print(":");
         Serial.print(shots_given[i]);
         Serial.print("/");
@@ -70,9 +70,9 @@ void handle_packet( const radio_packet_t & rx_pkt )
         {
             Serial.print("Unexpected bot ID!");
             Serial.print("Shooter = ");
-            Serial.print(rx_pkt.shot.shooter_id);
+            Serial.print((char) rx_pkt.shot.shooter_id);
             Serial.print(" / Target = ");
-            Serial.print(rx_pkt.shot.target_id);
+            Serial.print((char) rx_pkt.shot.target_id);
             Serial.println();
         }
         else if (millis() - last_shot_time[shooter_idx] >= 3000)
@@ -83,9 +83,9 @@ void handle_packet( const radio_packet_t & rx_pkt )
 
             Serial.print("SHOT: ");
             Serial.print("Shooter = ");
-            Serial.print(rx_pkt.shot.shooter_id);
+            Serial.print((char) rx_pkt.shot.shooter_id);
             Serial.print(" / Target = ");
-            Serial.print(rx_pkt.shot.target_id);
+            Serial.print((char) rx_pkt.shot.target_id);
             Serial.println();
 
             print_result();
