@@ -78,7 +78,7 @@ void handle_packet( const radio_packet_t & rx_pkt )
             Serial.print((char) rx_pkt.shot.target_id);
             Serial.println();
         }
-        else if (millis() - last_shot_time[shooter_idx] >= 3000)
+        else if (millis() - last_shot_time[shooter_idx] >= 5000)
         {
             ++shots_given[shooter_idx];
             ++shots_received[target_idx];
@@ -173,6 +173,10 @@ int main()
 
         if (now - then >= 50)
         {
+            static bool on = false;
+            on = !on;
+            digitalWrite(13, on ? HIGH : LOW);
+
             then = now;
 
             transmit_sonar_trigger_packet(bot_ids[bot_id_index]);
