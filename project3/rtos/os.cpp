@@ -924,13 +924,8 @@ static void kernel_service_publish()
 {
     ServiceSubscription *sub = requested_service->subscriptions;
 
-    bool current_is_subscriber = false;
-
     while(sub)
     {
-        if (sub->subscriber == cur_task)
-            current_is_subscriber = true;
-
         sub->unread = true;
 
         if (sub->waiting && sub->subscriber->state == WAITING)
@@ -945,7 +940,7 @@ static void kernel_service_publish()
     // We might be in an interrupt, so that the current task is
     // also a subscriber and was already enqueued above.
     // Only enqueue if that's not the case.
-    if (!current_is_subscriber)
+    if (cur_task->state == RUNNING)
         kernel_enqueue_task(cur_task);
 }
 
